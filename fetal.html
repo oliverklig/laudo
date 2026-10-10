@@ -651,7 +651,7 @@ function salvarNoDrive() {
       fim();
       if (res && res.ok) {
         salvoNoDrive = true;
-        aviso('Salvo no Drive: ' + arq.arquivo);
+        aviso('Salvo no Drive: ' + (res.nome || arq.arquivo));
       } else {
         var erro = (res && res.erro) || 'resposta inesperada';
         alert('O Drive não salvou o laudo: ' + erro);
