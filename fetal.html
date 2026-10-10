@@ -139,6 +139,9 @@
         <div><label for="exame">Data do exame</label><input id="exame" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10"></div>
         <div><label for="local">Local do exame</label><select id="local"></select></div>
         <div class="inteiro oculto" id="localOutroBox"><label for="localOutro">Outro local</label><input id="localOutro"></div>
+        <div class="inteiro" id="convBox"><label for="convenio">Convênio</label><select id="convenio"></select></div>
+        <div class="inteiro oculto" id="convCidadeBox"><label for="convCidade">Cidade (Cismetro)</label><select id="convCidade"></select></div>
+        <div class="inteiro oculto" id="convOutroBox"><label for="convOutro">Outro convênio (escreva o nome)</label><input id="convOutro"></div>
       </div>
       <div class="linha-ig" style="margin-top:8px">
         <div><label for="ig">Idade gestacional</label><input id="ig" placeholder="ex: 27+4 ou 27"></div>
@@ -605,6 +608,7 @@ function novaGestante() {
 // Envia uma copia do laudo para o Google Drive pelo "App da Web" (script "Salvar Laudos").
 // Endereco e chave ficam guardados so neste navegador, se voce escolher "lembrar".
 var CFG_DRIVE = 'laudoEcoDrive';
+var URL_PADRAO = '';   // endereco do app ja embutido (versao do pendrive); em branco = perguntar
 var cfgSessao = null;
 var salvoNoDrive = false;
 
@@ -618,7 +622,7 @@ function driveConfigurado() { return !!(lerCfgDrive() || cfgSessao); }
 
 function configurarDrive() {
   var atual = lerCfgDrive() || cfgSessao || {};
-  var url = prompt('Cole o endereço do App da Web "Salvar Laudos" (começa com https://script.google.com/ e termina em /exec):', atual.url || '');
+  var url = URL_PADRAO || prompt('Cole o endereço do App da Web "Salvar Laudos" (começa com https://script.google.com/ e termina em /exec):', atual.url || '');
   if (url === null) return null;
   url = url.trim();
   if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) {
@@ -641,7 +645,7 @@ function salvarNoDrive() {
   var botao = $('salvarDrive');
   botao.disabled = true; botao.textContent = 'Salvando...';
   function fim() { botao.disabled = false; botao.textContent = 'Salvar no Drive'; }
-  fetch(c.url, { method: 'POST', body: JSON.stringify({ chave: c.chave, tipo: arq.tipo, modelo: arq.modelo, arquivo: arq.arquivo, dados: arq.dados }) })
+  fetch(c.url, { method: 'POST', body: JSON.stringify({ chave: c.chave, tipo: arq.tipo, modelo: arq.modelo, convenio: arq.convenio || '', arquivo: arq.arquivo, dados: arq.dados }) })
     .then(function (r) { return r.json(); })
     .then(function (res) {
       fim();
@@ -673,6 +677,8 @@ function arquivoParaDrive() {
   render();
   var d = dadosGerais();
   var arquivo = (d.nome ? d.nome + ' - ' : '') + (d.gemelar ? 'GEMELAR - ' : '') + 'ECO FETAL ' + dataTexto(d.exame).replace(/\//g, '.');
+  var conv = convenioAtual();
+  if (conv) arquivo += ' ' + conv;
   var n = d.gemelar ? 2 : 1, lista = [];
   for (var i = 0; i < n; i++) {
     var f = fetos[i], t = textosFeto(f), pos = f.pos.value.trim().toUpperCase();
@@ -680,13 +686,56 @@ function arquivoParaDrive() {
                  analise: t.analise.trim(), conclusao: t.conclusao, livres: t.livres });
   }
   return {
-    tipo: 'fetal', modelo: 'fetal', arquivo: arquivo,
+    tipo: 'fetal', modelo: 'fetal', arquivo: arquivo, convenio: conv,
     dados: { nome: d.nome, exame: dataTexto(d.exame), ig: d.ig, local: d.local, rodape: d.rodape,
              gemelar: d.gemelar, fetos: lista }
   };
 }
 
 // ===================== INICIO =====================
+// ===================== CONVENIO =====================
+// Para incluir um convenio novo, acrescente uma linha em CONVENIOS: [nome na tela, sufixo no nome do arquivo].
+// O sufixo vai no fim do nome do arquivo e decide a pasta do Drive (convenio novo ganha pasta propria).
+var CONVENIOS = [
+  ['Particular', ''],
+  ['Cismetro', 'CISMETRO'],
+  ['Santa Casa Saúde', 'SANTA CASA SAUDE RIO CLARO'],
+  ['Hapvida', 'HAPVIDA'],
+  ['Santa Filomena', 'SANTA FILOMENA']
+];
+var CIDADES_CISMETRO = [['Rio Claro', 'RIO CLARO'], ['Cordeirópolis', 'CORDEIROPOLIS'], ['Engenheiro Coelho', 'ENGENHEIRO COELHO'],
+  ['Santa Gertrudes', 'SANTA GERTRUDES'], ['Iracemápolis', 'IRACEMAPOLIS'], ['Pirassununga', 'PIRASSUNUNGA'],
+  ['Araras', 'ARARAS'], ['Limeira', 'LIMEIRA']];
+
+function convenioVisivel() {
+  var t = document.querySelector('input[name=tipo]:checked');
+  return !(t && t.value === 'int');   // internado: quem decide e o hospital
+}
+function convenioAtual() {
+  if (!convenioVisivel()) return '';
+  var v = $('convenio').value;
+  if (v === 'outro') return $('convOutro').value.trim().toUpperCase();
+  var c = CONVENIOS[+v || 0][1];
+  if (c === 'CISMETRO') c += ' ' + CIDADES_CISMETRO[+$('convCidade').value || 0][1];
+  return c;
+}
+function atualizarConvenio() {
+  var v = $('convenio').value;
+  $('convBox').classList.toggle('oculto', !convenioVisivel());
+  $('convCidadeBox').classList.toggle('oculto', !convenioVisivel() || v === 'outro' || CONVENIOS[+v || 0][1] !== 'CISMETRO');
+  $('convOutroBox').classList.toggle('oculto', !convenioVisivel() || v !== 'outro');
+}
+(function montarConvenios() {
+  var s = '';
+  CONVENIOS.forEach(function (c, i) { s += '<option value="' + i + '">' + c[0] + '</option>'; });
+  $('convenio').innerHTML = s + '<option value="outro">Outro…</option>';
+  var sc = '';
+  CIDADES_CISMETRO.forEach(function (c, i) { sc += '<option value="' + i + '">' + c[0] + '</option>'; });
+  $('convCidade').innerHTML = sc;
+  document.addEventListener('change', atualizarConvenio);
+  atualizarConvenio();
+})();
+
 (function iniciar() {
   var opt = '<option value="">—</option>';
   LOCAIS.forEach(function (l, i) { opt += '<option value="' + i + '">' + esc(l.nome) + '</option>'; });
