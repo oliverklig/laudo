@@ -123,7 +123,7 @@
   <!-- ===================== FORMULARIO ===================== -->
   <form class="form" id="form" autocomplete="off" onsubmit="return false">
     <h1>Laudo Eco Infantil</h1>
-    <p class="sub">Nada é enviado para lugar nenhum: tudo é calculado no seu navegador. · <a href="zscore.html" style="color:var(--cor)">Calculadora de Z-score</a> · <a href="fetal.html" style="color:var(--cor)">Eco fetal</a></p>
+    <p class="sub">Nada é enviado para fora, exceto quando você clica em “Salvar no Drive” (vai só para o seu Drive). · <a href="zscore.html" style="color:var(--cor)">Calculadora de Z-score</a> · <a href="fetal.html" style="color:var(--cor)">Eco fetal</a></p>
 
     <div class="tipo">
       <label><input type="radio" name="tipo" value="amb" checked><span>Ambulatorial</span></label>
@@ -197,9 +197,11 @@
     <div class="acoes">
       <button type="button" class="btn" id="imprimir">Imprimir / PDF</button>
       <button type="button" class="btn" id="copiar">Copiar para o MV</button>
+      <button type="button" class="btn lado" id="salvarDrive">Salvar no Drive</button>
       <button type="button" class="btn sec lado" id="novo">Novo paciente</button>
     </div>
     <div id="aviso"></div>
+    <div class="calc"><a href="#" id="cfgDrive" style="color:var(--suave)">Configurar Salvar no Drive</a></div>
   </form>
 
   <!-- ===================== LAUDO ===================== -->
@@ -661,7 +663,8 @@ function trocarConclusao(i) {
 }
 
 function novoPaciente() {
-  if (!confirm('Limpar todos os campos para um novo paciente?')) return;
+  if (!podeLimpar('Limpar todos os campos para um novo paciente?')) return;
+  salvoNoDrive = false;
   ['nome', 'nasc', 'peso', 'altura', 'localOutro', 'ig', 'dias', 'drogas', 'comentario'].forEach(function (id) { $(id).value = ''; });
   LINHAS.forEach(function (l) { $('m_' + l.id).value = ''; });
   $('exame').value = dataTexto(hoje());
@@ -671,6 +674,137 @@ function novoPaciente() {
   comentarioEditado = false;
   render();
   $('nome').focus();
+}
+
+// ===================== SALVAR NO DRIVE =====================
+// Envia uma copia do laudo para o Google Drive pelo "App da Web" (script "Salvar Laudos").
+// Endereco e chave ficam guardados so neste navegador, se voce escolher "lembrar".
+var CFG_DRIVE = 'laudoEcoDrive';
+var cfgSessao = null;
+var salvoNoDrive = false;
+
+function lerCfgDrive() {
+  try { return JSON.parse(localStorage.getItem(CFG_DRIVE) || 'null'); } catch (e) { return null; }
+}
+function gravarCfgDrive(c) {
+  try { if (c) localStorage.setItem(CFG_DRIVE, JSON.stringify(c)); else localStorage.removeItem(CFG_DRIVE); } catch (e) {}
+}
+function driveConfigurado() { return !!(lerCfgDrive() || cfgSessao); }
+
+function configurarDrive() {
+  var atual = lerCfgDrive() || cfgSessao || {};
+  var url = prompt('Cole o endereço do App da Web "Salvar Laudos" (começa com https://script.google.com/ e termina em /exec):', atual.url || '');
+  if (url === null) return null;
+  url = url.trim();
+  if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) {
+    alert('Endereço inválido. Ele começa com https://script.google.com/ e termina em /exec.');
+    return null;
+  }
+  var chave = prompt('Chave (a mesma que você escreveu no script):', atual.chave || '');
+  if (chave === null) return null;
+  var c = { url: url, chave: chave.trim() };
+  cfgSessao = c;
+  if (confirm('Lembrar endereço e chave neste computador?\n\nOK = lembrar (computador seu).\nCancelar = pedir de novo da próxima vez (computador compartilhado).')) gravarCfgDrive(c);
+  else gravarCfgDrive(null);
+  return c;
+}
+
+function salvarNoDrive() {
+  var c = lerCfgDrive() || cfgSessao || configurarDrive();
+  if (!c) return;
+  var arq = arquivoParaDrive();   // definido em cada gerador: {tipo, mes, nome, html}
+  var botao = $('salvarDrive');
+  botao.disabled = true; botao.textContent = 'Salvando...';
+  function fim() { botao.disabled = false; botao.textContent = 'Salvar no Drive'; }
+  fetch(c.url, { method: 'POST', body: JSON.stringify({ chave: c.chave, tipo: arq.tipo, mes: arq.mes, nome: arq.nome, html: arq.html }) })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      fim();
+      if (res && res.ok) {
+        salvoNoDrive = true;
+        aviso('Salvo no Drive: ' + arq.nome);
+      } else {
+        var erro = (res && res.erro) || 'resposta inesperada';
+        alert('O Drive não salvou o laudo: ' + erro);
+        if (/chave/i.test(erro)) { gravarCfgDrive(null); cfgSessao = null; }
+      }
+    })
+    .catch(function () {
+      fim();
+      alert('Não consegui falar com o Google Drive (internet fora do ar ou Google bloqueado neste local).\nO laudo NÃO foi salvo no Drive.');
+    });
+}
+
+// Pergunta antes de limpar, se o Drive estiver configurado e o laudo ainda nao foi salvo.
+function podeLimpar(msg) {
+  if (driveConfigurado() && !salvoNoDrive)
+    return confirm('Este laudo ainda NÃO foi salvo no Drive.\n\n' + msg);
+  return confirm(msg);
+}
+
+// Estilos simples (inline) para o Google Docs converter bem.
+var DOC = {
+  p: 'margin:0;font-family:Arial;font-size:9.5pt;',
+  b: 'font-weight:bold;',
+  cab: function () {
+    return '<p style="text-align:center;margin:0"><span style="font-family:\'Comic Sans MS\';font-size:14pt;color:#660000;font-weight:bold">Dr. Oliver Kligerman</span></p>' +
+      '<p style="text-align:center;margin:0"><span style="font-family:\'Comic Sans MS\';font-size:10.5pt;font-weight:bold">Cardiologista pediátrico, Ecocardiografista infantil e fetal</span></p>' +
+      '<p style="text-align:center;margin:0 0 8pt 0"><span style="font-family:\'Comic Sans MS\';font-size:10.5pt;font-weight:bold">CRM 164416 / RQE 727341</span></p>';
+  },
+  bloco: function (linhas) {   // linhas = [[ [rotulo, valor], [rotulo, valor] ], ...]
+    var h = '<table style="border-collapse:collapse;width:100%">';
+    linhas.forEach(function (l) {
+      h += '<tr>';
+      l.forEach(function (c) {
+        h += '<td style="background-color:#f6ecec;padding:2pt 6pt;border:none;font-family:Arial;font-size:9.5pt"' + (l.length === 1 ? ' colspan="2"' : '') + '>' +
+             '<b>' + esc(c[0]) + '</b> ' + esc(c[1]) + '</td>';
+      });
+      h += '</tr>';
+    });
+    return h + '</table>';
+  },
+  titulo: function (t) { return '<p style="text-align:center;margin:10pt 0 6pt 0;font-family:Arial;font-size:12pt;font-weight:bold;text-decoration:underline">' + esc(t) + '</p>'; },
+  secao: function (t, ita) { return '<p style="margin:8pt 0 1pt 0;font-family:Arial;font-size:9.5pt;font-weight:bold' + (ita ? ';font-style:italic' : '') + '">' + esc(t) + '</p>'; },
+  texto: function (t, ita) {
+    return String(t).split('\n').map(function (l) {
+      return '<p style="margin:0;font-family:Arial;font-size:9.5pt' + (ita ? ';font-style:italic' : '') + '">' + (l.trim() ? esc(l) : '&nbsp;') + '</p>';
+    }).join('');
+  },
+  // o script do Drive troca [[ASSINATURA]] pela imagem da assinatura guardada no seu Drive
+  rodape: function (t) {
+    return '<p style="text-align:right;margin:10pt 0 0 0;font-family:Arial;font-size:9pt">[[ASSINATURA]]</p>' +
+      (t ? '<p style="text-align:center;margin:6pt 0 0 0;font-family:Arial;font-size:9pt;font-style:italic">' + esc(t) + '</p>' : '');
+  },
+  quebra: '<p style="page-break-before:always;margin:0"></p>',
+  doc: function (corpo) { return '<html><head><meta charset="utf-8"></head><body>' + corpo + '</body></html>'; }
+};
+function mesDe(d) { return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1); }
+
+function arquivoParaDrive() {
+  render();
+  var d = dados();
+  var nome = (d.nome ? d.nome + ' - ' : '') + 'ECO INFANTIL ' + dataTexto(d.exame).replace(/\//g, '.');
+  var h = DOC.cab();
+  h += DOC.bloco([
+    [['Nome:', d.nome], ['Data do exame:', dataTexto(d.exame)]],
+    [['Data de nascimento:', d.nasc ? dataTexto(d.nasc) : ''], ['Local do exame:', d.local]],
+    [['Idade:', d.idade ? d.idade.toUpperCase() : ''], ['', antropoTexto(d, false)]]
+  ]);
+  h += DOC.titulo('ECOCARDIOGRAMA TRANSTORÁCICO INFANTIL COM DOPPLER COLORIDO');
+  var t = '<table style="border-collapse:collapse;margin-left:auto;margin-right:auto">';
+  var th = 'background-color:#660000;color:#ffffff;font-weight:bold;border:1px solid #c9b8b8;padding:2pt 6pt;font-family:Arial;font-size:9.5pt';
+  var td = 'border:1px solid #c9b8b8;padding:2pt 6pt;font-family:Arial;font-size:9.5pt';
+  t += '<tr><td style="' + th + '">ESTRUTURA</td><td style="' + th + '">MEDIDAS</td><td style="' + th + '">VALOR REFERENCIA</td></tr>';
+  LINHAS.forEach(function (l) {
+    t += '<tr><td style="' + td + ';font-weight:bold">' + esc(l.nome) + '</td><td style="' + td + '">' + esc(valorMedida(l, d)) +
+         '</td><td style="' + td + '">' + esc(referencia(l, d)) + '</td></tr>';
+  });
+  h += t + '</table>';
+  h += DOC.secao('Análise Descritiva:') + DOC.texto($('analise').value.trim());
+  if (d.internado && $('comentario').value.trim()) h += DOC.secao('Comentários:') + DOC.texto($('comentario').value.trim());
+  h += DOC.secao('Conclusão:') + DOC.texto($('conclusao').value.trim());
+  h += DOC.rodape(d.rodape);
+  return { tipo: 'Eco Infantil', mes: mesDe(d.exame), nome: nome, html: DOC.doc(h) };
 }
 
 // ===================== INICIO =====================
@@ -727,6 +861,9 @@ function novoPaciente() {
   $('imprimir').addEventListener('click', imprimir);
   $('copiar').addEventListener('click', copiar);
   $('novo').addEventListener('click', novoPaciente);
+  $('salvarDrive').addEventListener('click', salvarNoDrive);
+  $('cfgDrive').addEventListener('click', function (e) { e.preventDefault(); configurarDrive(); });
+  $('form').addEventListener('input', function () { salvoNoDrive = false; });
   render();
 })();
 </script>
