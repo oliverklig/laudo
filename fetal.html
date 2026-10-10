@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laudo Eco Fetal</title>
+<style>
+  :root {
+    --cor: #660000;
+    --cor-clara: #f6ecec;
+    --tela: #eceae8;
+    --painel: #ffffff;
+    --texto: #1d1d1f;
+    --suave: #6b6b70;
+    --linha: #ddd5d5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--tela); color: var(--texto);
+         font: 14px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+
+  /* ---------- tela ---------- */
+  .app { display: grid; grid-template-columns: minmax(340px, 440px) 1fr; gap: 16px; padding: 16px; align-items: start; }
+  .form { background: var(--painel); border-radius: 12px; padding: 14px 16px 18px;
+          position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+  .form h1 { font-size: 17px; color: var(--cor); margin: 0 0 2px; }
+  .form .sub { color: var(--suave); font-size: 12px; margin: 0 0 10px; }
+  fieldset { border: none; padding: 0; margin: 14px 0 0; }
+  legend { font-size: 11px; font-weight: 700; color: var(--cor); text-transform: uppercase; letter-spacing: .05em;
+           border-bottom: 2px solid var(--cor); width: 100%; padding-bottom: 3px; margin-bottom: 8px; }
+  .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .inteiro { grid-column: 1 / -1; }
+  label { display: block; font-size: 11.5px; color: var(--suave); margin-bottom: 2px; }
+  input, select, textarea {
+    width: 100%; font: inherit; font-size: 15px; padding: 6px 8px; border: 1px solid var(--linha);
+    border-radius: 7px; background: #fff; color: var(--texto);
+  }
+  textarea { font-size: 13px; line-height: 1.35; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--cor); outline-offset: -1px; border-color: transparent; }
+  .tipo { display: flex; gap: 6px; }
+  .tipo label { flex: 1; margin: 0; position: relative; }
+  .tipo input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .tipo input:focus-visible + span { outline: 2px solid var(--cor); outline-offset: 2px; }
+  .tipo span { display: block; text-align: center; padding: 7px; border: 1px solid var(--cor); border-radius: 7px;
+               color: var(--cor); font-size: 13px; cursor: pointer; }
+  .tipo input:checked + span { background: var(--cor); color: #fff; }
+  .calc { font-size: 12px; color: var(--suave); margin-top: 4px; }
+  .calc b { color: var(--cor); }
+  .linha-ig { display: flex; gap: 8px; align-items: end; }
+  .linha-ig > div { flex: 1; }
+  .chip { font: inherit; font-size: 12px; padding: 4px 9px; border-radius: 14px; border: 1px solid var(--cor);
+          background: #fff; color: var(--cor); cursor: pointer; white-space: nowrap; }
+  .feto { border: 1px solid var(--linha); border-radius: 10px; padding: 10px 12px 12px; margin-top: 14px; }
+  .feto h2 { font-size: 14px; color: var(--cor); margin: 0 0 8px; }
+  .caixa { background: #faf6f6; border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
+  .marca { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--texto); margin: 4px 0; cursor: pointer; }
+  .marca input { width: auto; margin-top: 2px; }
+  .marca.titulo-lim { font-weight: 700; color: var(--cor); }
+  .sub-lim { margin-left: 22px; }
+  .sub-lim .mini { font-size: 11px; color: var(--suave); text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 2px; }
+  .acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .btn { font: inherit; font-size: 14px; padding: 10px; border-radius: 8px; border: 1px solid var(--cor);
+         background: var(--cor); color: #fff; cursor: pointer; }
+  .btn.sec { background: #fff; color: var(--cor); }
+  .btn.lado { grid-column: 1 / -1; }
+  #aviso { font-size: 12px; color: #1f7a3a; min-height: 16px; margin-top: 6px; }
+  .oculto { display: none !important; }
+
+  /* ---------- folha A4 ---------- */
+  .previa { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .folha {
+    --k: 1; --e: 0;
+    flex-shrink: 0;
+    width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 2px 14px rgba(0,0,0,.15);
+    padding: 11mm 15mm 8mm; position: relative; color: #000;
+    font-family: Arial, Helvetica, sans-serif; font-size: calc(9.5pt * var(--k)); line-height: calc(1.15 + var(--e));
+  }
+  .cab { text-align: center; font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive; margin-bottom: calc(5mm * var(--k)); line-height: 1.2; }
+  .cab .medico { color: var(--cor); font-weight: 700; font-size: 14pt; }
+  .cab .esp, .cab .crm { font-weight: 700; font-size: 10.5pt; }
+  .bloco { width: 100%; border-collapse: collapse; table-layout: fixed; background: var(--cor-clara); font-size: calc(9.5pt * var(--k)); }
+  .bloco td { padding: calc(2px * var(--k)) 9px; vertical-align: top; }
+  .bloco td.esq { width: 60%; } .bloco td.dir { width: 40%; }
+  .bloco b { font-weight: 700; }
+  .bloco .um { white-space: nowrap; overflow: hidden; }
+  .titulo { text-align: center; font-weight: 700; text-decoration: underline; font-size: calc(12pt * var(--k));
+            margin: calc(5mm * var(--k) + 20mm * var(--e)) 0 calc(3mm * var(--k) + 10mm * var(--e)); }
+  .ig { font-weight: 700; }
+  .feto-tit { font-weight: 700; margin-top: calc(3mm * var(--k) + 15mm * var(--e)); }
+  .secao { font-weight: 700; margin: calc(4mm * var(--k) + 25mm * var(--e)) 0 calc(1mm * var(--k)); }
+  .secao.ita { font-style: italic; }
+  .texto p { margin: 0; }
+  .coment p { font-style: italic; margin: 0; }
+  .coment p.livre { font-style: normal; }
+  .rodape { padding-top: 4mm; break-inside: avoid; page-break-inside: avoid; }
+  .folha.cabe .rodape { position: absolute; left: 15mm; right: 15mm; bottom: 8mm; }
+  .rodape .assin { text-align: right; padding-right: 8mm; }
+  .rodape .assin img { width: 46mm; }
+  .espaco-assin { height: 30mm; }
+  .rodape .traco { border-top: 1px solid #000; margin-top: 2mm; }
+  .rodape .end { text-align: center; font-style: italic; font-size: 9pt; margin-top: 3mm; }
+
+  @media (max-width: 1000px) {
+    .app { grid-template-columns: 1fr; }
+    .form { position: static; max-height: none; }
+    .previa { overflow-x: auto; align-items: flex-start; }
+  }
+
+  /* ---------- impressao ---------- */
+  @page { size: A4; margin: 0; }
+  @media print {
+    body { background: #fff; }
+    .form { display: none; }
+    .app { display: block; padding: 0; }
+    .previa { display: block; }
+    .folha { box-shadow: none; width: auto; min-height: 0; break-after: page; page-break-after: always; }
+    .folha:last-child { break-after: auto; page-break-after: auto; }
+    .folha.cabe { height: 296mm; overflow: hidden; }
+    .bloco { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===================== FORMULARIO ===================== -->
+  <form class="form" id="form" autocomplete="off" onsubmit="return false">
+    <h1>Laudo Eco Fetal</h1>
+    <p class="sub">Nada é enviado para lugar nenhum: tudo é calculado no seu navegador. · <a href="index.html" style="color:var(--cor)">Eco infantil</a></p>
+
+    <div class="tipo">
+      <label><input type="radio" name="gest" value="1" checked><span>Feto único</span></label>
+      <label><input type="radio" name="gest" value="2"><span>Gemelar</span></label>
+    </div>
+
+    <fieldset>
+      <legend>Gestante</legend>
+      <div class="grade">
+        <div class="inteiro"><label for="nome">Nome</label><input id="nome"></div>
+        <div><label for="exame">Data do exame</label><input id="exame" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10"></div>
+        <div><label for="local">Local do exame</label><select id="local"></select></div>
+        <div class="inteiro oculto" id="localOutroBox"><label for="localOutro">Outro local</label><input id="localOutro"></div>
+      </div>
+      <div class="linha-ig" style="margin-top:8px">
+        <div><label for="ig">Idade gestacional</label><input id="ig" placeholder="ex: 27+4 ou 27"></div>
+        <div style="flex:0 0 130px"><label for="dpp">ou pela DPP</label><input id="dpp" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10"></div>
+      </div>
+      <div class="calc" id="calcIG">Digite a IG, ou a data provável do parto para calcular.</div>
+    </fieldset>
+
+    <div id="fetosForm"></div>
+
+    <div class="acoes">
+      <button type="button" class="btn" id="imprimir">Imprimir / PDF</button>
+      <button type="button" class="btn" id="copiar">Copiar para o MV</button>
+      <button type="button" class="btn sec lado" id="novo">Nova gestante</button>
+    </div>
+    <div id="aviso"></div>
+  </form>
+
+  <!-- ===================== LAUDO ===================== -->
+  <div class="previa" id="previa"></div>
+</div>
+
+<template id="tplFetoForm">
+  <div class="feto">
+    <h2 class="f-titulo">Feto</h2>
+    <div class="grade">
+      <div class="f-posBox inteiro"><label>Posição / situação (gemelar)</label><input class="f-pos" placeholder="ex: transverso, dorso posterior, localizado inferiormente"></div>
+      <div class="inteiro"><label>Frequência cardíaca (bpm) – ex: 148 ou 140-150</label><input class="f-fc" inputmode="numeric"></div>
+    </div>
+
+    <div class="caixa">
+      <label class="marca titulo-lim"><input type="checkbox" class="f-lim"> Exame com limitação técnica</label>
+      <div class="sub-lim f-limBox oculto">
+        <div class="mini">Grau</div>
+        <select class="f-grau">
+          <option value="certa">certa</option>
+          <option value="bastante">bastante</option>
+          <option value="extrema">extrema</option>
+        </select>
+        <div class="mini">Causa (atenuação excessiva dos feixes sonoros)</div>
+        <label class="marca"><input type="checkbox" class="f-c1" checked> parede abdominal materna</label>
+        <label class="marca"><input type="checkbox" class="f-c2"> posição fetal desfavorável</label>
+        <label class="marca"><input type="checkbox" class="f-c3"> idade gestacional avançada</label>
+        <div class="mini">Frases do laudo</div>
+        <label class="marca"><input type="checkbox" class="f-t0" checked> Conexão venosa pulmonar não avaliada</label>
+        <label class="marca"><input type="checkbox" class="f-t1" checked> Septo interventricular de difícil avaliação</label>
+        <label class="marca"><input type="checkbox" class="f-t2" checked> Arco aórtico de difícil avaliação</label>
+        <div class="mini">Onde escrever a limitação</div>
+        <select class="f-onde">
+          <option value="coment">Comentários (antes do ¹²³)</option>
+          <option value="conc">Conclusão</option>
+        </select>
+        <label class="marca"><input type="checkbox" class="f-semalt"> Conclusão: “sem alterações detectáveis ao método”</label>
+      </div>
+    </div>
+
+    <div style="margin-top:10px"><label>Análise descritiva</label><textarea class="f-analise" rows="11"></textarea></div>
+    <div style="margin-top:8px"><label>Conclusão</label><textarea class="f-conclusao" rows="2"></textarea></div>
+    <div style="margin-top:8px"><label>Comentário livre (opcional – entra antes do ¹²³)</label><textarea class="f-livre" rows="2"></textarea></div>
+    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
+      <button type="button" class="chip f-troca" data-troca="0">Golf ball</button>
+      <button type="button" class="chip f-troca" data-troca="1">IT</button>
+      <button type="button" class="chip f-restaurar">Restaurar texto padrão</button>
+    </div>
+  </div>
+</template>
+
+<template id="tplFolha">
+  <div class="folha">
+    <div class="conteudo">
+      <div class="cab">
+        <div class="medico">Dr. Oliver Kligerman</div>
+        <div class="esp">Cardiologista pediátrico, Ecocardiografista infantil e fetal</div>
+        <div class="crm">CRM 164416 / RQE 727341</div>
+      </div>
+      <table class="bloco">
+        <tr><td class="esq"><div class="um"><b>Nome:</b> <span class="p-nome"></span></div></td>
+            <td class="dir"><div class="um"><b>Data do exame:</b> <span class="p-exame"></span></div></td></tr>
+        <tr><td colspan="2"><div class="um"><b>Local do exame:</b> <span class="p-local"></span></div></td></tr>
+      </table>
+      <div class="titulo">ECOCARDIOGRAMA FETAL COM DOPPLER COLORIDO</div>
+      <div class="ig">Idade gestacional aproximada: <span class="p-ig"></span></div>
+      <div class="feto-tit p-fetoTit"></div>
+      <div class="secao">Análise Descritiva:</div>
+      <div class="texto p-analise"></div>
+      <div class="secao">Conclusão:</div>
+      <div class="texto p-conclusao"></div>
+      <div class="secao ita">Comentários:</div>
+      <div class="texto coment p-coment"></div>
+    </div>
+    <div class="rodape">
+      <div class="assin"><div class="espaco-assin"></div></div>
+      <div class="traco"></div>
+      <div class="end p-rodape"></div>
+    </div>
+  </div>
+</template>
+
+<script>
+// ===================== DADOS =====================
+var LOCAIS = [
+  { nome: 'Clínica Doce Infância',
+    rodape: 'Clínica Doce Infância Especialidades Pediátricas, Rua Tatuibi, 67, Vila Paulista, Limeira-SP, CEP 13484-050' },
+  { nome: 'Núcleo de Especialidades de Americana',
+    rodape: 'Núcleo de Especialidades de Americana, R. Goiânia, 80 - Vila Nossa Sra. de Fátima, Americana - SP, 13478-660' },
+  { nome: 'Diagmed - Parque Dom Pedro',
+    rodape: 'Diagmed - Parque Dom Pedro, Av. Guilherme Campos, 500 - Jardim Santa Genebra, Campinas - SP, 13080-000' }
+];
+
+var FC_LINHA = '- Ritmo cardíaco regular, com frequência cardíaca de ___ bpm';
+
+var ANALISE_PADRAO = [
+  FC_LINHA,
+  '- Situs solitus. Levocardia.',
+  '- Conexão venosa sistêmica normal. Conexão venosa pulmonar aparentemente normal.',
+  '- Conexão atrioventricular biventricular concordante.',
+  '- Conexão ventriculoarterial concordante.',
+  '- Septo interatrial com forame oval patente normofuncionante.',
+  '- Septo interventricular íntegro (considerando as limitações do método) e com espessura normal para a idade gestacional.',
+  '- Átrio direito com dimensão normal.',
+  '- Átrio esquerdo com dimensão normal.',
+  '- Valva tricúspide sem disfunção.',
+  '- Valva mitral sem disfunção.',
+  '- Ventrículo direito com dimensão e espessura miocárdica normais. Função sistólica preservada à análise qualitativa. Via de saída sem obstruções.',
+  '- Ventrículo esquerdo com dimensão e espessura miocárdica normais. Função sistólica preservada. Via de saída sem obstruções.',
+  '- Valva pulmonar sem disfunção.',
+  '- Valva aórtica sem disfunção.',
+  '- Tronco pulmonar de dimensões normais. Artérias pulmonares confluentes.',
+  '- Arco aórtico à esquerda com dimensões e fluxos normais',
+  '- Canal arterial com calibre adequado, sem restrição ao fluxo.',
+  '- Pericárdio de aspecto normal, sem derrame.'
+].join('\n');
+
+var CONCLUSAO_PADRAO = 'Ecocardiograma fetal normal para a idade gestacional.';
+var CONCLUSAO_LIMITADA = 'Ecocardiograma fetal sem alterações detectáveis ao método (vide comentários e laudo descritivo).';
+
+var COMENTARIOS_FIXOS = [
+  '¹ A ecocardiografia fetal tem por objetivo identificar malformações e analisar a função e o ritmo do coração fetal. Em condições técnicas favoráveis este exame consegue detectar mais de 90% das cardiopatias congênitas graves.',
+  '² O período ideal para realização do exame é entre 24 e 28 semanas de idade gestacional. Quando realizado fora do período ideal o exame pode apresentar limitações. Além disso, fatores como biotipo materno e posição fetal, podem alterar significativamente a sensibilidade do exame.',
+  '³ Devido às particularidades da circulação fetal e limitações do método, as principais dificuldades diagnósticas são: comunicação interatrial, comunicação interventricular, coarctação de aorta e anomalias da drenagem venosa pulmonar.'
+];
+
+// Trocas de frase quando ha limitacao tecnica
+var TROCAS_LIM = [
+  { padrao: 'Conexão venosa pulmonar aparentemente normal.',
+    nova: 'Conexão venosa pulmonar não avaliada.' },
+  { padrao: 'Septo interventricular íntegro (considerando as limitações do método) e com espessura normal para a idade gestacional.',
+    nova: 'Septo interventricular de difícil avaliação, aparentemente íntegro (considerando as limitações do método) e com espessura normal para a idade gestacional.' },
+  { padrao: 'Arco aórtico à esquerda com dimensões e fluxos normais',
+    nova: 'Arco aórtico à esquerda, de difícil avaliação, aparentemente com dimensões e fluxos normais.' }
+];
+
+// Botoes de alteracoes frequentes (clicar de novo desfaz). A conclusao nao muda.
+var TROCAS_BOTOES = [
+  { padrao: 'Ventrículo esquerdo com dimensão e espessura miocárdica normais. Função sistólica preservada. Via de saída sem obstruções.',
+    nova: 'Ventrículo esquerdo com dimensão e espessura miocárdica normais. Mínimo foco hiperecogênico, no interior do ventrículo esquerdo, em aparato subvalvar mitral, único e isolado, sem significado patológico. Função sistólica preservada. Via de saída sem obstruções.' },
+  { padrao: 'Valva tricúspide sem disfunção.',
+    nova: 'Valva tricúspide com morfologia normal e regurgitação protossistólica discreta, fisiológica - sem significado patológico.' }
+];
+
+// ===================== UTILIDADES =====================
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function hoje() { var h = new Date(); return new Date(h.getFullYear(), h.getMonth(), h.getDate()); }
+function lerData(txt) {
+  var s = String(txt).trim(), d, m, a;
+  if (/^[0-9]{8}$/.test(s)) { d = +s.substr(0, 2); m = +s.substr(2, 2); a = +s.substr(4, 4); }
+  else {
+    var p = s.split(/[^0-9]+/);
+    if (p.length != 3 || !p[0]) return null;
+    d = +p[0]; m = +p[1]; a = +p[2];
+  }
+  if (a < 100) a += 2000;
+  var data = new Date(a, m - 1, d);
+  if (data.getFullYear() != a || data.getMonth() != m - 1 || data.getDate() != d) return null;
+  return data;
+}
+function dataTexto(d) {
+  function z(n) { return (n < 10 ? '0' : '') + n; }
+  return z(d.getDate()) + '/' + z(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+function mascaraData(el) {
+  el.addEventListener('input', function (e) {
+    if (e.inputType && e.inputType.indexOf('delete') === 0) return;
+    var n = el.value.replace(/[^0-9]/g, '').slice(0, 8);
+    var f = n.slice(0, 2);
+    if (n.length > 2) f += '/' + n.slice(2, 4);
+    if (n.length > 4) f += '/' + n.slice(4);
+    if (n.length === 2 || n.length === 4) f += '/';
+    el.value = f;
+  });
+}
+function paragrafos(t, cls) {
+  return t.split('\n').map(function (l) {
+    return '<p' + (cls ? ' class="' + cls + '"' : '') + '>' + (l.trim() ? esc(l) : '&nbsp;') + '</p>';
+  }).join('');
+}
+
+// IG a partir da DPP: IG = 280 dias - (DPP - data do exame)
+function igPelaDPP(dpp, exame) {
+  var dias = 280 - Math.round((dpp - exame) / 86400000);
+  if (dias < 0 || dias > 300) return null;
+  var s = Math.floor(dias / 7), d = dias % 7;
+  return s + ' semanas' + (d ? ' + ' + d + (d == 1 ? ' dia' : ' dias') : '');
+}
+
+// "27+4" -> "27 semanas + 4 dias"; "27" -> "27 semanas"; outro texto fica como foi digitado
+function textoIG(v) {
+  var m = String(v).trim().match(/^([0-9]{1,2})\s*(?:\+\s*([0-6]))?$/);
+  if (!m) return String(v).trim();
+  var d = m[2] ? +m[2] : 0;
+  return m[1] + ' semanas' + (d ? ' + ' + d + (d == 1 ? ' dia' : ' dias') : '');
+}
+
+// "148" -> "de 148 bpm"; "140-150" ou "140 a 150" -> "variando de 140 a 150 bpm"
+function textoFC(fc) {
+  var nums = String(fc).match(/[0-9]+/g);
+  if (!nums) return null;
+  if (nums.length >= 2) return 'frequência cardíaca variando de ' + nums[0] + ' a ' + nums[1] + ' bpm';
+  return 'frequência cardíaca de ' + nums[0] + ' bpm';
+}
+
+// ===================== FETOS (formulario) =====================
+var fetos = [];   // um objeto por feto com referencias aos campos
+
+function criarFeto(i) {
+  var frag = $('tplFetoForm').content.cloneNode(true);
+  var raiz = frag.querySelector('.feto');
+  var q = function (c) { return raiz.querySelector(c); };
+  var f = {
+    raiz: raiz, i: i,
+    pos: q('.f-pos'), fc: q('.f-fc'), lim: q('.f-lim'), limBox: q('.f-limBox'), grau: q('.f-grau'),
+    c: [q('.f-c1'), q('.f-c2'), q('.f-c3')], t: [q('.f-t0'), q('.f-t1'), q('.f-t2')],
+    onde: q('.f-onde'), semalt: q('.f-semalt'),
+    analise: q('.f-analise'), conclusao: q('.f-conclusao'), livre: q('.f-livre')
+  };
+  f.analise.value = ANALISE_PADRAO;
+  f.conclusao.value = CONCLUSAO_PADRAO;
+  q('.f-titulo').textContent = 'Feto ' + (i + 1);
+
+  f.lim.addEventListener('change', function () { aplicarLimitacao(f); render(); });
+  f.t.forEach(function (cb, k) {
+    cb.addEventListener('change', function () { trocar(f.analise, TROCAS_LIM[k], f.lim.checked && cb.checked); render(); });
+  });
+  f.semalt.addEventListener('change', function () {
+    trocar(f.conclusao, { padrao: CONCLUSAO_PADRAO, nova: CONCLUSAO_LIMITADA }, f.lim.checked && f.semalt.checked);
+    render();
+  });
+  raiz.querySelectorAll('.f-troca').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = TROCAS_BOTOES[+b.getAttribute('data-troca')];
+      var v = f.analise.value;
+      if (v.indexOf(t.nova) >= 0) f.analise.value = v.replace(t.nova, t.padrao);
+      else if (v.indexOf(t.padrao) >= 0) f.analise.value = v.replace(t.padrao, t.nova);
+      else { aviso('A frase padrão não está no texto deste feto.'); return; }
+      render();
+    });
+  });
+  q('.f-restaurar').addEventListener('click', function () {
+    if (!confirm('Voltar análise e conclusão deste feto ao texto padrão?')) return;
+    f.analise.value = ANALISE_PADRAO; f.conclusao.value = CONCLUSAO_PADRAO;
+    f.lim.checked = false; f.semalt.checked = false; aplicarLimitacao(f); render();
+  });
+  $('fetosForm').appendChild(frag);
+  return f;
+}
+
+// liga/desliga uma troca de frase dentro de um textarea
+function trocar(area, t, ligar) {
+  var v = area.value;
+  if (ligar && v.indexOf(t.padrao) >= 0) area.value = v.replace(t.padrao, t.nova);
+  if (!ligar && v.indexOf(t.nova) >= 0) area.value = v.replace(t.nova, t.padrao);
+}
+
+function aplicarLimitacao(f) {
+  var on = f.lim.checked;
+  f.limBox.classList.toggle('oculto', !on);
+  f.t.forEach(function (cb, k) { trocar(f.analise, TROCAS_LIM[k], on && cb.checked); });
+  trocar(f.conclusao, { padrao: CONCLUSAO_PADRAO, nova: CONCLUSAO_LIMITADA }, on && f.semalt.checked);
+}
+
+function fraseLimitacao(f) {
+  if (!f.lim.checked) return '';
+  var causas = [];
+  if (f.c[0].checked) causas.push('parede abdominal materna');
+  if (f.c[1].checked) causas.push('posição fetal desfavorável');
+  if (f.c[2].checked) causas.push('idade gestacional avançada');
+  var lista = causas.length > 1 ? causas.slice(0, -1).join(', ') + ' e ' + causas[causas.length - 1] : (causas[0] || '');
+  return 'Exame realizado com ' + f.grau.value + ' limitação técnica por atenuação excessiva dos feixes sonoros' +
+    (lista ? ' (' + lista + ')' : '') + '.';
+}
+
+function ajustarQuantidade() {
+  var n = +document.querySelector('input[name=gest]:checked').value;
+  while (fetos.length < n) fetos.push(criarFeto(fetos.length));
+  fetos.forEach(function (f, i) {
+    f.raiz.classList.toggle('oculto', i >= n);
+    f.raiz.querySelector('.f-titulo').classList.toggle('oculto', n === 1);
+    f.raiz.querySelector('.f-posBox').classList.toggle('oculto', n === 1);
+  });
+}
+
+// ===================== DADOS GERAIS =====================
+function dadosGerais() {
+  var d = {};
+  d.gemelar = +document.querySelector('input[name=gest]:checked').value === 2;
+  d.nome = $('nome').value.trim().toUpperCase();
+  d.exame = lerData($('exame').value) || hoje();
+  var li = $('local').value;
+  if (li === 'outro') { d.local = $('localOutro').value.trim().toUpperCase(); d.rodape = ''; }
+  else if (li === '') { d.local = ''; d.rodape = ''; }
+  else { d.local = LOCAIS[+li].nome.toUpperCase(); d.rodape = LOCAIS[+li].rodape; }
+  var dpp = lerData($('dpp').value);
+  d.igDPP = dpp ? igPelaDPP(dpp, d.exame) : null;
+  d.ig = textoIG($('ig').value) || d.igDPP || '';
+  return d;
+}
+
+function textosFeto(f) {
+  var fc = textoFC(f.fc.value);
+  var analise = f.analise.value;
+  if (fc) analise = analise.replace(/frequência cardíaca de ___ bpm/, fc);
+  var lim = fraseLimitacao(f);
+  var conclusao = f.conclusao.value.trim();
+  var livres = [];
+  if (lim && f.onde.value === 'conc') conclusao += (conclusao ? '\n' : '') + lim;
+  if (lim && f.onde.value === 'coment') livres.push(lim);
+  if (f.livre.value.trim()) livres.push(f.livre.value.trim());
+  return { analise: analise, conclusao: conclusao, livres: livres };
+}
+
+// ===================== RENDER =====================
+function render() {
+  ajustarQuantidade();
+  var d = dadosGerais();
+  $('localOutroBox').classList.toggle('oculto', $('local').value !== 'outro');
+  $('calcIG').innerHTML = d.igDPP ? 'Pela DPP: <b>' + d.igDPP + '</b>' + ($('ig').value.trim() ? ' (vale o que está digitado no campo IG)' : '')
+                                  : 'Digite a IG, ou a data provável do parto para calcular.';
+
+  var n = d.gemelar ? 2 : 1;
+  var previa = $('previa');
+  while (previa.children.length < n) previa.appendChild($('tplFolha').content.cloneNode(true).querySelector('.folha'));
+  while (previa.children.length > n) previa.removeChild(previa.lastChild);
+
+  for (var i = 0; i < n; i++) {
+    var folha = previa.children[i], f = fetos[i], t = textosFeto(f);
+    var q = function (c) { return folha.querySelector(c); };
+    q('.p-nome').textContent = d.nome;
+    q('.p-exame').textContent = dataTexto(d.exame);
+    q('.p-local').textContent = d.local;
+    q('.p-ig').textContent = d.ig;
+    var pos = f.pos.value.trim().toUpperCase();
+    q('.p-fetoTit').textContent = d.gemelar ? 'FETO ' + (i + 1) + (pos ? ' (' + pos + ')' : '') : '';
+    q('.p-fetoTit').classList.toggle('oculto', !d.gemelar);
+    q('.p-analise').innerHTML = paragrafos(t.analise);
+    q('.p-conclusao').innerHTML = paragrafos(t.conclusao);
+    q('.p-coment').innerHTML = (t.livres.length ? paragrafos(t.livres.join('\n'), 'livre') : '') + paragrafos(COMENTARIOS_FIXOS.join('\n'));
+    q('.p-rodape').textContent = d.rodape;
+    ajustarTamanho(folha);
+  }
+}
+
+// Maior letra que cabe em uma pagina; sobra vira espacamento; assinatura no pe da pagina.
+function cabe(folha) {
+  var mm = 96 / 25.4;
+  var fim = folha.querySelector('.conteudo').getBoundingClientRect().bottom - folha.getBoundingClientRect().top;
+  var rod = folha.querySelector('.rodape').getBoundingClientRect().height;
+  return fim + rod + 8 * mm <= 293 * mm;
+}
+function ajustarTamanho(folha) {
+  folha.classList.remove('cabe');
+  var k = 1.3;
+  folha.style.setProperty('--e', 0);
+  folha.style.setProperty('--k', k);
+  while (k > 0.9 && !cabe(folha)) { k = Math.round((k - 0.025) * 1000) / 1000; folha.style.setProperty('--k', k); }
+  var e = 0;
+  if (cabe(folha)) {
+    while (e < 0.3) {
+      folha.style.setProperty('--e', Math.round((e + 0.01) * 100) / 100);
+      if (!cabe(folha)) break;
+      e = Math.round((e + 0.01) * 100) / 100;
+    }
+  }
+  folha.style.setProperty('--e', e);
+  folha.classList.toggle('cabe', cabe(folha));
+  folha.querySelectorAll('.bloco .um').forEach(function (el) {
+    var alvo = el.querySelector('span') || el;
+    alvo.style.fontSize = '';
+    var tam = parseFloat(getComputedStyle(alvo).fontSize), min = tam * 0.55;
+    while (el.scrollWidth > el.clientWidth + 1 && tam > min) { tam -= 0.25; alvo.style.fontSize = tam + 'px'; }
+  });
+}
+
+// ===================== TEXTO PARA O MV =====================
+function textoMV() {
+  var d = dadosGerais(), L = [];
+  L.push('Nome: ' + d.nome + '     Data do exame: ' + dataTexto(d.exame));
+  L.push('Local do exame: ' + d.local);
+  L.push(''); L.push('ECOCARDIOGRAMA FETAL COM DOPPLER COLORIDO'); L.push('');
+  L.push('Idade gestacional aproximada: ' + d.ig);
+  var n = d.gemelar ? 2 : 1;
+  for (var i = 0; i < n; i++) {
+    var f = fetos[i], t = textosFeto(f);
+    if (d.gemelar) {
+      var pos = f.pos.value.trim().toUpperCase();
+      L.push(''); L.push('FETO ' + (i + 1) + (pos ? ' (' + pos + ')' : ''));
+    }
+    L.push(''); L.push('Análise Descritiva:'); L.push(t.analise.trim());
+    L.push(''); L.push('Conclusão:'); L.push(t.conclusao);
+    L.push(''); L.push('Comentários:');
+    t.livres.forEach(function (x) { L.push(x); });
+    COMENTARIOS_FIXOS.forEach(function (x) { L.push(x); });
+  }
+  return L.join('\n');
+}
+
+// ===================== ACOES =====================
+function aviso(t) { $('aviso').textContent = t; setTimeout(function () { if ($('aviso').textContent === t) $('aviso').textContent = ''; }, 3500); }
+
+function copiar() {
+  var t = textoMV();
+  function plano() {
+    var ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    aviso(ok ? 'Texto copiado. Cole no sistema do hospital.' : 'Não foi possível copiar automaticamente.');
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(t).then(function () { aviso('Texto copiado. Cole no sistema do hospital.'); }, plano);
+  } else { plano(); }
+}
+
+function imprimir() {
+  render();
+  var d = dadosGerais(), antigo = document.title;
+  document.title = (d.nome ? d.nome + ' - ' : '') + (d.gemelar ? 'GEMELAR - ' : '') + 'ECO FETAL ' + dataTexto(d.exame).replace(/\//g, '.');
+  window.print();
+  setTimeout(function () { document.title = antigo; }, 1000);
+}
+
+function novaGestante() {
+  if (!confirm('Limpar todos os campos para uma nova gestante?')) return;
+  ['nome', 'ig', 'dpp', 'localOutro'].forEach(function (id) { $(id).value = ''; });
+  $('exame').value = dataTexto(hoje());
+  fetos.forEach(function (f) {
+    f.pos.value = ''; f.fc.value = ''; f.livre.value = '';
+    f.lim.checked = false; f.semalt.checked = false; f.grau.value = 'certa';
+    f.c[0].checked = true; f.c[1].checked = false; f.c[2].checked = false;
+    f.t.forEach(function (cb) { cb.checked = true; });
+    f.onde.value = 'coment';
+    f.analise.value = ANALISE_PADRAO; f.conclusao.value = CONCLUSAO_PADRAO;
+    aplicarLimitacao(f);
+  });
+  render();
+  $('nome').focus();
+}
+
+// ===================== INICIO =====================
+(function iniciar() {
+  var opt = '<option value="">—</option>';
+  LOCAIS.forEach(function (l, i) { opt += '<option value="' + i + '">' + esc(l.nome) + '</option>'; });
+  $('local').innerHTML = opt + '<option value="outro">Outro…</option>';
+  $('local').value = '0';
+  $('exame').value = dataTexto(hoje());
+  mascaraData($('exame')); mascaraData($('dpp'));
+  $('form').addEventListener('input', render);
+  $('form').addEventListener('change', render);
+  $('imprimir').addEventListener('click', imprimir);
+  $('copiar').addEventListener('click', copiar);
+  $('novo').addEventListener('click', novaGestante);
+  window.addEventListener('beforeprint', function () { document.querySelectorAll('.folha').forEach(ajustarTamanho); });
+  render();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>
