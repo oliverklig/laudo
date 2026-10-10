@@ -712,17 +712,17 @@ function configurarDrive() {
 function salvarNoDrive() {
   var c = lerCfgDrive() || cfgSessao || configurarDrive();
   if (!c) return;
-  var arq = arquivoParaDrive();   // definido em cada gerador: {tipo, mes, nome, html}
+  var arq = arquivoParaDrive();   // definido em cada gerador: {tipo, modelo, arquivo, dados}
   var botao = $('salvarDrive');
   botao.disabled = true; botao.textContent = 'Salvando...';
   function fim() { botao.disabled = false; botao.textContent = 'Salvar no Drive'; }
-  fetch(c.url, { method: 'POST', body: JSON.stringify({ chave: c.chave, tipo: arq.tipo, mes: arq.mes, nome: arq.nome, html: arq.html }) })
+  fetch(c.url, { method: 'POST', body: JSON.stringify({ chave: c.chave, tipo: arq.tipo, modelo: arq.modelo, arquivo: arq.arquivo, dados: arq.dados }) })
     .then(function (r) { return r.json(); })
     .then(function (res) {
       fim();
       if (res && res.ok) {
         salvoNoDrive = true;
-        aviso('Salvo no Drive: ' + arq.nome);
+        aviso('Salvo no Drive: ' + arq.arquivo);
       } else {
         var erro = (res && res.erro) || 'resposta inesperada';
         alert('O Drive não salvou o laudo: ' + erro);
@@ -742,69 +742,25 @@ function podeLimpar(msg) {
   return confirm(msg);
 }
 
-// Estilos simples (inline) para o Google Docs converter bem.
-var DOC = {
-  p: 'margin:0;font-family:Arial;font-size:9.5pt;',
-  b: 'font-weight:bold;',
-  cab: function () {
-    return '<p style="text-align:center;margin:0"><span style="font-family:\'Comic Sans MS\';font-size:14pt;color:#660000;font-weight:bold">Dr. Oliver Kligerman</span></p>' +
-      '<p style="text-align:center;margin:0"><span style="font-family:\'Comic Sans MS\';font-size:10.5pt;font-weight:bold">Cardiologista pediátrico, Ecocardiografista infantil e fetal</span></p>' +
-      '<p style="text-align:center;margin:0 0 8pt 0"><span style="font-family:\'Comic Sans MS\';font-size:10.5pt;font-weight:bold">CRM 164416 / RQE 727341</span></p>';
-  },
-  bloco: function (linhas) {   // linhas = [[ [rotulo, valor], [rotulo, valor] ], ...]
-    var h = '<table style="border-collapse:collapse;width:100%">';
-    linhas.forEach(function (l) {
-      h += '<tr>';
-      l.forEach(function (c) {
-        h += '<td style="background-color:#f6ecec;padding:2pt 6pt;border:none;font-family:Arial;font-size:9.5pt"' + (l.length === 1 ? ' colspan="2"' : '') + '>' +
-             '<b>' + esc(c[0]) + '</b> ' + esc(c[1]) + '</td>';
-      });
-      h += '</tr>';
-    });
-    return h + '</table>';
-  },
-  titulo: function (t) { return '<p style="text-align:center;margin:10pt 0 6pt 0;font-family:Arial;font-size:12pt;font-weight:bold;text-decoration:underline">' + esc(t) + '</p>'; },
-  secao: function (t, ita) { return '<p style="margin:8pt 0 1pt 0;font-family:Arial;font-size:9.5pt;font-weight:bold' + (ita ? ';font-style:italic' : '') + '">' + esc(t) + '</p>'; },
-  texto: function (t, ita) {
-    return String(t).split('\n').map(function (l) {
-      return '<p style="margin:0;font-family:Arial;font-size:9.5pt' + (ita ? ';font-style:italic' : '') + '">' + (l.trim() ? esc(l) : '&nbsp;') + '</p>';
-    }).join('');
-  },
-  // o script do Drive troca [[ASSINATURA]] pela imagem da assinatura guardada no seu Drive
-  rodape: function (t) {
-    return '<p style="text-align:right;margin:10pt 0 0 0;font-family:Arial;font-size:9pt">[[ASSINATURA]]</p>' +
-      (t ? '<p style="text-align:center;margin:6pt 0 0 0;font-family:Arial;font-size:9pt;font-style:italic">' + esc(t) + '</p>' : '');
-  },
-  quebra: '<p style="page-break-before:always;margin:0"></p>',
-  doc: function (corpo) { return '<html><head><meta charset="utf-8"></head><body>' + corpo + '</body></html>'; }
-};
 function mesDe(d) { return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1); }
 
 function arquivoParaDrive() {
   render();
   var d = dados();
-  var nome = (d.nome ? d.nome + ' - ' : '') + 'ECO INFANTIL ' + dataTexto(d.exame).replace(/\//g, '.');
-  var h = DOC.cab();
-  h += DOC.bloco([
-    [['Nome:', d.nome], ['Data do exame:', dataTexto(d.exame)]],
-    [['Data de nascimento:', d.nasc ? dataTexto(d.nasc) : ''], ['Local do exame:', d.local]],
-    [['Idade:', d.idade ? d.idade.toUpperCase() : ''], ['', antropoTexto(d, false)]]
-  ]);
-  h += DOC.titulo('ECOCARDIOGRAMA TRANSTORÁCICO INFANTIL COM DOPPLER COLORIDO');
-  var t = '<table style="border-collapse:collapse;margin-left:auto;margin-right:auto">';
-  var th = 'background-color:#660000;color:#ffffff;font-weight:bold;border:1px solid #c9b8b8;padding:2pt 6pt;font-family:Arial;font-size:9.5pt';
-  var td = 'border:1px solid #c9b8b8;padding:2pt 6pt;font-family:Arial;font-size:9.5pt';
-  t += '<tr><td style="' + th + '">ESTRUTURA</td><td style="' + th + '">MEDIDAS</td><td style="' + th + '">VALOR REFERENCIA</td></tr>';
-  LINHAS.forEach(function (l) {
-    t += '<tr><td style="' + td + ';font-weight:bold">' + esc(l.nome) + '</td><td style="' + td + '">' + esc(valorMedida(l, d)) +
-         '</td><td style="' + td + '">' + esc(referencia(l, d)) + '</td></tr>';
-  });
-  h += t + '</table>';
-  h += DOC.secao('Análise Descritiva:') + DOC.texto($('analise').value.trim());
-  if (d.internado && $('comentario').value.trim()) h += DOC.secao('Comentários:') + DOC.texto($('comentario').value.trim());
-  h += DOC.secao('Conclusão:') + DOC.texto($('conclusao').value.trim());
-  h += DOC.rodape(d.rodape);
-  return { tipo: 'Eco Infantil', mes: mesDe(d.exame), nome: nome, html: DOC.doc(h) };
+  var arquivo = (d.nome ? d.nome + ' - ' : '') + 'ECO INFANTIL ' + dataTexto(d.exame).replace(/\//g, '.');
+  var medidas = LINHAS.map(function (l) { return { rotulo: l.nome, medida: valorMedida(l, d), ref: referencia(l, d) }; });
+  return {
+    tipo: 'infantil', modelo: d.internado ? 'int' : 'amb', arquivo: arquivo,
+    dados: {
+      nome: d.nome, exame: dataTexto(d.exame), nasc: d.nasc ? dataTexto(d.nasc) : '',
+      idade: d.idade ? d.idade.toUpperCase() : '', local: d.local, rodape: d.rodape,
+      peso: d.peso > 0 ? semZero(d.peso) : '', altura: d.altura > 0 ? semZero(d.altura) : '',
+      sc: d.sc ? virgula(d.sc, 2) : '', medidas: medidas,
+      analise: $('analise').value.trim(),
+      comentario: d.internado ? $('comentario').value.trim() : '',
+      conclusao: $('conclusao').value.trim()
+    }
+  };
 }
 
 // ===================== INICIO =====================
