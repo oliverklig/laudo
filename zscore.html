@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Z-score Eco Infantil</title>
+<style>
+  :root {
+    --cor: #660000;
+    --cor-clara: #f6ecec;
+    --fundo: #ffffff;
+    --texto: #1d1d1f;
+    --suave: #6b6b70;
+    --linha: #e4dcdc;
+    --ok: #1f7a3a;
+    --alerta: #a86400;
+    --grave: #b00020;
+    --campo: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --cor: #e08a8a;
+      --cor-clara: #2a1d1d;
+      --fundo: #141414;
+      --texto: #f2f2f2;
+      --suave: #a8a8ad;
+      --linha: #3a2e2e;
+      --ok: #5cc27a;
+      --alerta: #e0a640;
+      --grave: #ff6b7d;
+      --campo: #1e1e1e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fundo);
+    color: var(--texto);
+    font: 15px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .pagina { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
+  h1 { font-size: 20px; margin: 4px 0 2px; color: var(--cor); }
+  .sub { color: var(--suave); font-size: 13px; margin: 0 0 16px; }
+
+  .paciente {
+    background: var(--cor-clara);
+    border-radius: 10px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    position: sticky; top: 0; z-index: 2;
+  }
+  .paciente label { font-size: 12px; color: var(--suave); display: block; margin-bottom: 3px; }
+  input {
+    width: 100%;
+    font: inherit; font-size: 16px;
+    padding: 8px 9px;
+    border: 1px solid var(--linha);
+    border-radius: 7px;
+    background: var(--campo);
+    color: var(--texto);
+  }
+  input:focus { outline: 2px solid var(--cor); outline-offset: -1px; border-color: transparent; }
+  .sc {
+    grid-column: 1 / -1;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+    border-top: 1px solid var(--linha); padding-top: 8px; margin-top: 2px;
+  }
+  .sc strong { font-size: 18px; color: var(--cor); }
+  .sc small { color: var(--suave); }
+
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--cor); margin: 22px 0 6px; padding-bottom: 4px; border-bottom: 2px solid var(--cor);
+  }
+  .linha {
+    display: grid;
+    grid-template-columns: 1.6fr 0.9fr 0.8fr 1.3fr;
+    gap: 8px; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid var(--linha);
+  }
+  .nome { font-size: 14px; }
+  .nome small { display: block; color: var(--suave); font-size: 11px; }
+  .z { font-weight: 700; font-size: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+  .z.ok { color: var(--ok); }
+  .z.alerta { color: var(--alerta); }
+  .z.grave { color: var(--grave); }
+  .faixa { font-size: 12px; color: var(--suave); font-variant-numeric: tabular-nums; }
+  .faixa b { color: var(--texto); font-weight: 600; }
+  .cabeca { font-size: 11px; color: var(--suave); text-transform: uppercase; letter-spacing: .03em; border-bottom: none; padding-bottom: 0; }
+  .cabeca .z { font-size: 11px; font-weight: 400; }
+
+  .acoes { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+  button {
+    font: inherit; padding: 10px 16px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--cor); background: var(--cor); color: #fff;
+  }
+  button.sec { background: transparent; color: var(--cor); }
+  #aviso { color: var(--ok); font-size: 13px; align-self: center; }
+  .nota { font-size: 12px; color: var(--suave); margin-top: 24px; line-height: 1.5; }
+  .nota p { margin: 0 0 8px; }
+
+  @media (max-width: 560px) {
+    .paciente { grid-template-columns: 1fr 1fr; }
+    .paciente .campo-sc { grid-column: 1 / -1; }
+    .linha { grid-template-columns: 1fr 78px 56px; }
+    .faixa { grid-column: 1 / -1; margin-top: -4px; }
+    .cabeca .faixa { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <h1>Z-score – Eco Infantil</h1>
+  <p class="sub">Pediatric Heart Network (Lopez et al., 2017) · funciona sem internet · <a href="index.html" style="color:var(--cor)">Voltar ao laudo</a></p>
+
+  <div class="paciente">
+    <div><label for="peso">Peso (kg)</label><input id="peso" inputmode="decimal" autocomplete="off"></div>
+    <div><label for="altura">Altura (cm)</label><input id="altura" inputmode="decimal" autocomplete="off"></div>
+    <div class="campo-sc"><label for="scManual">ou SC direta (m²)</label><input id="scManual" inputmode="decimal" autocomplete="off" placeholder="opcional"></div>
+    <div class="sc"><span>SC usada: <strong id="scTexto">—</strong></span><small id="scFonte">informe peso e altura</small></div>
+  </div>
+
+  <div id="grupos"></div>
+
+  <div class="acoes">
+    <button id="copiar">Copiar Z-scores</button>
+    <button id="limpar" class="sec">Limpar</button>
+    <span id="aviso"></span>
+  </div>
+
+  <div class="nota">
+    <p><b>Fórmula:</b> Z = (medida ÷ SC<sup>α</sup> − média) ÷ DP, com SC de Haycock = 0,024265 × peso<sup>0,5378</sup> × altura<sup>0,3964</sup>. A faixa mostrada é o intervalo de Z −2 a +2 para essa SC.</p>
+    <p><b>Sem altura:</b> a SC é estimada só pelo peso (Costeff, (4P+7)/(P+90)), que não é a fórmula usada pela PHN. Use como aproximação.</p>
+    <p><b>Cores:</b> verde |Z| ≤ 2 · laranja 2 &lt; |Z| ≤ 3 · vermelho |Z| &gt; 3.</p>
+    <p><b>Fonte:</b> Lopez L et al. Relationship of Echocardiographic Z Scores Adjusted for Body Surface Area to Age, Sex, Race, and Ethnicity: The Pediatric Heart Network Normal Echocardiogram Database. <i>Circ Cardiovasc Imaging</i>. 2017;10:e006979 (Tabela 2). População de referência: crianças saudáveis de 0 a 18 anos. Ferramenta de apoio; não substitui o julgamento clínico.</p>
+  </div>
+</div>
+
+<script>
+// alfa, media e dp da Tabela 2 (PHN, Lopez 2017). unidade = unidade da tabela; entrada = unidade digitada.
+var GRUPOS = [
+  { titulo: 'Ventrículo esquerdo', itens: [
+    { id: 'LVEDD', nome: 'DDVE', det: 'diâmetro diastólico', alfa: 0.45, media: 3.89, dp: 0.33, entrada: 'mm', tabela: 'cm' },
+    { id: 'LVST',  nome: 'Septo IV', det: 'espessura diastólica', alfa: 0.40, media: 0.58, dp: 0.09, entrada: 'mm', tabela: 'cm' },
+    { id: 'LVPWT', nome: 'Parede posterior', det: 'espessura diastólica', alfa: 0.40, media: 0.57, dp: 0.09, entrada: 'mm', tabela: 'cm' },
+    { id: 'LVM',   nome: 'Massa VE', det: 'gramas', alfa: 1.25, media: 53.02, dp: 9.06, entrada: 'g', tabela: 'g' },
+    { id: 'LVEDV', nome: 'Volume diastólico VE', det: 'mL', alfa: 1.30, media: 62.02, dp: 11.94, entrada: 'mL', tabela: 'mL' }
+  ]},
+  { titulo: 'Valvas atrioventriculares', itens: [
+    { id: 'MVLAT', nome: 'Anel mitral', det: 'lateral (4 câmaras)', alfa: 0.50, media: 2.23, dp: 0.22, entrada: 'mm', tabela: 'cm' },
+    { id: 'MVAP',  nome: 'Anel mitral', det: 'anteroposterior (eixo longo)', alfa: 0.50, media: 2.31, dp: 0.24, entrada: 'mm', tabela: 'cm' },
+    { id: 'TVLAT', nome: 'Anel tricúspide', det: 'lateral (4 câmaras)', alfa: 0.50, media: 2.36, dp: 0.29, entrada: 'mm', tabela: 'cm' },
+    { id: 'TVAP',  nome: 'Anel tricúspide', det: 'anteroposterior', alfa: 0.50, media: 2.36, dp: 0.28, entrada: 'mm', tabela: 'cm' }
+  ]},
+  { titulo: 'Aorta', itens: [
+    { id: 'ANN',      nome: 'Anel aórtico', det: '', alfa: 0.50, media: 1.48, dp: 0.14, entrada: 'mm', tabela: 'cm' },
+    { id: 'ROOT',     nome: 'Raiz (seios de Valsalva)', det: '', alfa: 0.50, media: 2.06, dp: 0.18, entrada: 'mm', tabela: 'cm' },
+    { id: 'STJ',      nome: 'Junção sinotubular', det: '', alfa: 0.50, media: 1.69, dp: 0.16, entrada: 'mm', tabela: 'cm' },
+    { id: 'AAO',      nome: 'Aorta ascendente', det: '', alfa: 0.50, media: 1.79, dp: 0.18, entrada: 'mm', tabela: 'cm' },
+    { id: 'ARCHPROX', nome: 'Arco proximal', det: '', alfa: 0.50, media: 1.53, dp: 0.23, entrada: 'mm', tabela: 'cm' },
+    { id: 'ARCHDIST', nome: 'Arco distal', det: '', alfa: 0.50, media: 1.36, dp: 0.19, entrada: 'mm', tabela: 'cm' },
+    { id: 'ISTH',     nome: 'Istmo', det: '', alfa: 0.50, media: 1.25, dp: 0.18, entrada: 'mm', tabela: 'cm' }
+  ]},
+  { titulo: 'Pulmonar', itens: [
+    { id: 'PVSAX', nome: 'Anel pulmonar', det: 'eixo curto', alfa: 0.50, media: 1.91, dp: 0.24, entrada: 'mm', tabela: 'cm' },
+    { id: 'PVLAX', nome: 'Anel pulmonar', det: 'eixo longo', alfa: 0.50, media: 2.01, dp: 0.28, entrada: 'mm', tabela: 'cm' },
+    { id: 'MPA',   nome: 'Tronco pulmonar', det: '', alfa: 0.50, media: 1.82, dp: 0.24, entrada: 'mm', tabela: 'cm' },
+    { id: 'RPA',   nome: 'Artéria pulmonar direita', det: '', alfa: 0.50, media: 1.07, dp: 0.18, entrada: 'mm', tabela: 'cm' },
+    { id: 'LPA',   nome: 'Artéria pulmonar esquerda', det: '', alfa: 0.50, media: 1.10, dp: 0.18, entrada: 'mm', tabela: 'cm' }
+  ]},
+  { titulo: 'Coronárias', itens: [
+    { id: 'LMCA', nome: 'Tronco da coronária esquerda', det: '', alfa: 0.45, media: 2.95, dp: 0.57, entrada: 'mm', tabela: 'mm' },
+    { id: 'LAD',  nome: 'Descendente anterior proximal', det: '', alfa: 0.45, media: 1.90, dp: 0.34, entrada: 'mm', tabela: 'mm' },
+    { id: 'RCA',  nome: 'Coronária direita proximal', det: '', alfa: 0.45, media: 2.32, dp: 0.55, entrada: 'mm', tabela: 'mm' }
+  ]}
+];
+
+function num(v) {
+  var n = parseFloat(String(v).replace(',', '.'));
+  return isFinite(n) ? n : NaN;
+}
+function fmt(n, casas) {
+  if (Math.abs(n) < 0.5 * Math.pow(10, -casas)) n = 0;
+  return n.toFixed(casas).replace('.', ',');
+}
+
+// fator para converter a unidade digitada na unidade da tabela
+function fator(item) { return (item.entrada === 'mm' && item.tabela === 'cm') ? 0.1 : 1; }
+
+function calcularSC() {
+  var manual = num(document.getElementById('scManual').value);
+  if (manual > 0) return { sc: manual, fonte: 'informada manualmente' };
+  var p = num(document.getElementById('peso').value);
+  var a = num(document.getElementById('altura').value);
+  if (!(p > 0)) return null;
+  if (a > 0) return { sc: 0.024265 * Math.pow(p, 0.5378) * Math.pow(a, 0.3964), fonte: 'Haycock (peso e altura)' };
+  return { sc: (4 * p + 7) / (p + 90), fonte: 'só peso (Costeff) – aproximação' };
+}
+
+function zScore(item, valor, sc) {
+  return (valor * fator(item) / Math.pow(sc, item.alfa) - item.media) / item.dp;
+}
+function valorParaZ(item, z, sc) {
+  return (item.media + z * item.dp) * Math.pow(sc, item.alfa) / fator(item);
+}
+function casasEntrada(item) { return item.entrada === 'mm' ? 1 : 0; }
+
+function montar() {
+  var html = '';
+  GRUPOS.forEach(function (g) {
+    html += '<h2>' + g.titulo + '</h2>';
+    html += '<div class="linha cabeca"><span>Estrutura</span><span>Medida</span><span class="z">Z</span><span class="faixa">Normal (Z −2 a +2)</span></div>';
+    g.itens.forEach(function (it) {
+      html += '<div class="linha">' +
+        '<div class="nome">' + it.nome + (it.det ? '<small>' + it.det + '</small>' : '') + '</div>' +
+        '<input id="m_' + it.id + '" inputmode="decimal" autocomplete="off" placeholder="' + it.entrada + '" aria-label="' + it.nome + ' ' + it.det + ' (' + it.entrada + ')">' +
+        '<div class="z" id="z_' + it.id + '">–</div>' +
+        '<div class="faixa" id="f_' + it.id + '"></div>' +
+        '</div>';
+    });
+  });
+  document.getElementById('grupos').innerHTML = html;
+}
+
+function atualizar() {
+  var r = calcularSC();
+  document.getElementById('scTexto').textContent = r ? fmt(r.sc, 2) + ' m²' : '—';
+  document.getElementById('scFonte').textContent = r ? r.fonte : 'informe peso e altura';
+  GRUPOS.forEach(function (g) {
+    g.itens.forEach(function (it) {
+      var zEl = document.getElementById('z_' + it.id);
+      var fEl = document.getElementById('f_' + it.id);
+      var v = num(document.getElementById('m_' + it.id).value);
+      zEl.className = 'z';
+      if (!r) { zEl.textContent = '–'; fEl.innerHTML = ''; return; }
+      var c = casasEntrada(it);
+      fEl.innerHTML = '<b>' + fmt(valorParaZ(it, -2, r.sc), c) + ' – ' + fmt(valorParaZ(it, 2, r.sc), c) + '</b> ' + it.entrada +
+        ' · esperado ' + fmt(valorParaZ(it, 0, r.sc), c);
+      if (!(v > 0)) { zEl.textContent = '–'; return; }
+      var z = zScore(it, v, r.sc);
+      zEl.textContent = (z > 0 ? '+' : '') + fmt(z, 2);
+      var az = Math.abs(z);
+      zEl.classList.add(az <= 2 ? 'ok' : (az <= 3 ? 'alerta' : 'grave'));
+    });
+  });
+}
+
+function textoResultados() {
+  var r = calcularSC();
+  if (!r) return '';
+  var linhas = [];
+  GRUPOS.forEach(function (g) {
+    g.itens.forEach(function (it) {
+      var v = num(document.getElementById('m_' + it.id).value);
+      if (!(v > 0)) return;
+      var z = zScore(it, v, r.sc);
+      linhas.push(it.nome + (it.det ? ' (' + it.det + ')' : '') + ': ' + fmt(v, casasEntrada(it)) + ' ' + it.entrada +
+        ' (Z ' + (z > 0 ? '+' : '') + fmt(z, 2) + ')');
+    });
+  });
+  if (!linhas.length) return '';
+  return 'Z-scores (PHN, SC ' + fmt(r.sc, 2) + ' m²):\n' + linhas.join('\n');
+}
+
+function copiar() {
+  var t = textoResultados();
+  var aviso = document.getElementById('aviso');
+  if (!t) { aviso.textContent = 'Nada para copiar ainda.'; return; }
+  function plano() {
+    var ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    aviso.textContent = ok ? 'Copiado!' : 'Não foi possível copiar.';
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(function () { aviso.textContent = 'Copiado!'; }, plano);
+  } else { plano(); }
+}
+
+function limpar() {
+  document.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+  document.getElementById('aviso').textContent = '';
+  atualizar();
+}
+
+montar();
+document.addEventListener('input', atualizar);
+document.getElementById('copiar').addEventListener('click', copiar);
+document.getElementById('limpar').addEventListener('click', limpar);
+atualizar();
+</script>
+</body>
+</html>

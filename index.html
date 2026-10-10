@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laudo Eco Infantil</title>
+<style>
+  :root {
+    --cor: #660000;
+    --cor-clara: #f6ecec;
+    --zebra: #fbf6f6;
+    --tela: #eceae8;
+    --painel: #ffffff;
+    --texto: #1d1d1f;
+    --suave: #6b6b70;
+    --linha: #ddd5d5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--tela); color: var(--texto);
+         font: 14px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+
+  /* ---------- layout de tela ---------- */
+  .app { display: grid; grid-template-columns: minmax(340px, 430px) 1fr; gap: 16px; padding: 16px; align-items: start; }
+  .form { background: var(--painel); border-radius: 12px; padding: 14px 16px 18px;
+          position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+  .form h1 { font-size: 17px; color: var(--cor); margin: 0 0 2px; }
+  .form .sub { color: var(--suave); font-size: 12px; margin: 0 0 10px; }
+  fieldset { border: none; padding: 0; margin: 14px 0 0; }
+  legend { font-size: 11px; font-weight: 700; color: var(--cor); text-transform: uppercase; letter-spacing: .05em;
+           border-bottom: 2px solid var(--cor); width: 100%; padding-bottom: 3px; margin-bottom: 8px; }
+  .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .grade3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; }
+  .inteiro { grid-column: 1 / -1; }
+  label { display: block; font-size: 11.5px; color: var(--suave); margin-bottom: 2px; }
+  input, select, textarea {
+    width: 100%; font: inherit; font-size: 15px; padding: 6px 8px; border: 1px solid var(--linha);
+    border-radius: 7px; background: #fff; color: var(--texto);
+  }
+  textarea { font-size: 13px; line-height: 1.35; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--cor); outline-offset: -1px; border-color: transparent; }
+  .tipo { display: flex; gap: 6px; }
+  .tipo label { flex: 1; margin: 0; }
+  .tipo label { position: relative; }
+  .tipo input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .tipo input:focus-visible + span { outline: 2px solid var(--cor); outline-offset: 2px; }
+  .tipo span { display: block; text-align: center; padding: 7px; border: 1px solid var(--cor); border-radius: 7px;
+               color: var(--cor); font-size: 13px; cursor: pointer; }
+  .tipo input:checked + span { background: var(--cor); color: #fff; }
+  .calc { font-size: 12px; color: var(--suave); margin-top: 6px; }
+  .calc b { color: var(--cor); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { font: inherit; font-size: 12px; padding: 4px 9px; border-radius: 14px; border: 1px solid var(--cor);
+          background: #fff; color: var(--cor); cursor: pointer; }
+  .acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .btn { font: inherit; font-size: 14px; padding: 10px; border-radius: 8px; border: 1px solid var(--cor);
+         background: var(--cor); color: #fff; cursor: pointer; }
+  .btn.sec { background: #fff; color: var(--cor); }
+  .btn.lado { grid-column: 1 / -1; }
+  #aviso { font-size: 12px; color: #1f7a3a; min-height: 16px; margin-top: 6px; }
+  .oculto { display: none !important; }
+
+  /* ---------- folha A4 ---------- */
+  .previa { display: flex; justify-content: center; }
+  .folha {
+    --k: 1; --e: 0;
+    flex-shrink: 0;
+    width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 2px 14px rgba(0,0,0,.15);
+    padding: 11mm 15mm 8mm; position: relative; color: #000;
+    font-family: Arial, Helvetica, sans-serif; font-size: calc(9.5pt * var(--k)); line-height: calc(1.15 + var(--e));
+  }
+  .cab { text-align: center; font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive; margin-bottom: calc(5mm * var(--k)); }
+  .cab .medico { color: var(--cor); font-weight: 700; font-size: calc(14pt * var(--k)); }
+  .cab .esp, .cab .crm { font-weight: 700; font-size: calc(10.5pt * var(--k)); }
+  .bloco { width: 100%; border-collapse: collapse; table-layout: fixed; background: var(--cor-clara); font-size: calc(9.5pt * var(--k)); }
+  .bloco td { padding: calc(2px * var(--k)) 9px; width: 50%; vertical-align: top; }
+  .bloco b { font-weight: 700; }
+  .bloco .um { white-space: nowrap; overflow: hidden; }
+  .titulo { text-align: center; font-weight: 700; text-decoration: underline; font-size: calc(12pt * var(--k));
+            margin: calc(4mm * var(--k) + 20mm * var(--e)) 0 calc(3mm * var(--k) + 15mm * var(--e)); }
+  .medidas { border-collapse: collapse; margin: 0 auto; font-size: calc(9.5pt * var(--k)); }
+  .medidas th, .medidas td { border: 1px solid #c9b8b8; padding: calc(2px * var(--k)) 8px; text-align: left; }
+  .medidas th { background: var(--cor); color: #fff; font-weight: 700; }
+  .medidas td:first-child { font-weight: 700; }
+  .medidas tr:nth-child(even) td { background: var(--zebra); }
+  .medidas col.c1 { width: calc(30mm * var(--k)); } .medidas col.c2 { width: calc(30mm * var(--k)); } .medidas col.c3 { width: calc(52mm * var(--k)); }
+  .secao { font-weight: 700; margin: calc(4mm * var(--k) + 30mm * var(--e)) 0 calc(1mm * var(--k)); }
+  .texto p { margin: 0; }
+  .rodape { padding-top: 4mm; break-inside: avoid; page-break-inside: avoid; }
+  .folha.cabe .rodape { position: absolute; left: 15mm; right: 15mm; bottom: 8mm; }
+  .rodape .assin { text-align: right; padding-right: 8mm; }
+  .rodape .assin img { width: 46mm; }
+  .espaco-assin { height: 30mm; }
+  .rodape .traco { border-top: 1px solid #000; margin-top: 2mm; }
+  .rodape .end { text-align: center; font-style: italic; font-size: 9pt; margin-top: 3mm; }
+  .reserva { height: 0; }
+
+
+  @media (max-width: 1000px) {
+    .app { grid-template-columns: 1fr; }
+    .form { position: static; max-height: none; }
+    .previa { overflow-x: auto; justify-content: flex-start; }
+  }
+
+  /* ---------- impressao ---------- */
+  @page { size: A4; margin: 0; }
+  @media print {
+    body { background: #fff; }
+    .form { display: none; }
+    .app { display: block; padding: 0; }
+    .previa { display: block; }
+    .folha { box-shadow: none; width: auto; min-height: 0; }
+    .folha.cabe { height: 296mm; overflow: hidden; }
+    .medidas th, .medidas td, .bloco, .medidas tr:nth-child(even) td {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .bloco { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===================== FORMULARIO ===================== -->
+  <form class="form" id="form" autocomplete="off" onsubmit="return false">
+    <h1>Laudo Eco Infantil</h1>
+    <p class="sub">Nada é enviado para lugar nenhum: tudo é calculado no seu navegador. · <a href="zscore.html" style="color:var(--cor)">Calculadora de Z-score</a></p>
+
+    <div class="tipo">
+      <label><input type="radio" name="tipo" value="amb" checked><span>Ambulatorial</span></label>
+      <label><input type="radio" name="tipo" value="int"><span>Internado</span></label>
+    </div>
+
+    <fieldset>
+      <legend>Paciente</legend>
+      <div class="grade">
+        <div class="inteiro"><label for="nome">Nome</label><input id="nome"></div>
+        <div><label for="nasc">Nascimento (dd/mm/aaaa)</label><input id="nasc" inputmode="numeric" placeholder="dd/mm/aaaa"></div>
+        <div><label for="exame">Data do exame</label><input id="exame" inputmode="numeric" placeholder="dd/mm/aaaa"></div>
+        <div class="inteiro"><label for="local">Local do exame</label><select id="local"></select></div>
+        <div class="inteiro oculto" id="localOutroBox"><label for="localOutro">Outro local</label><input id="localOutro"></div>
+        <div><label for="peso">Peso (kg)</label><input id="peso" inputmode="decimal"></div>
+        <div><label for="altura">Altura (cm) – opcional</label><input id="altura" inputmode="decimal"></div>
+      </div>
+      <div class="calc" id="calc">Informe o peso para calcular a SC.</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Medidas</legend>
+      <div class="grade3">
+        <div class="inteiro calc" style="margin:0 0 2px">FEVE (Teichholz) e massa VE (ASE, indexada pela SC) são calculadas sozinhas; digite um valor só se quiser usar o do aparelho.</div>
+        <div><label for="m_AE">AE (mm)</label><input id="m_AE" inputmode="decimal"></div>
+        <div><label for="m_AO">Ao raiz (mm)</label><input id="m_AO" inputmode="decimal"></div>
+        <div><label for="m_SEPTO">Septo (mm)</label><input id="m_SEPTO" inputmode="decimal"></div>
+        <div><label for="m_PP">Parede post (mm)</label><input id="m_PP" inputmode="decimal"></div>
+        <div><label for="m_DDVD">DDVD (mm)</label><input id="m_DDVD" inputmode="decimal"></div>
+        <div><label for="m_DDVE">DDVE (mm)</label><input id="m_DDVE" inputmode="decimal"></div>
+        <div><label for="m_DSVE">DSVE (mm)</label><input id="m_DSVE" inputmode="decimal"></div>
+        <div><label for="m_FEVE">FEVE T (%)</label><input id="m_FEVE" inputmode="decimal"></div>
+        <div><label for="m_MASSA">Massa VE (g/m²)</label><input id="m_MASSA" inputmode="decimal"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Análise descritiva</legend>
+      <textarea id="analise" rows="12"></textarea>
+      <div class="chips">
+        <button type="button" class="chip" data-frase="0">Forame oval patente</button>
+        <button type="button" class="chip" data-frase="1">IT discreta + PSVD</button>
+        <button type="button" class="chip" data-frase="2">PCA</button>
+        <button type="button" class="chip" data-frase="3">CIV</button>
+        <button type="button" class="chip" id="restaurar">Restaurar texto padrão</button>
+      </div>
+    </fieldset>
+
+    <fieldset id="comentBox" class="oculto">
+      <legend>Comentários (internado)</legend>
+      <div class="grade">
+        <div class="inteiro"><label for="setor">Setor</label><select id="setor"></select></div>
+        <div id="igBox"><label for="ig">IG ao nascer (semanas)</label><input id="ig" placeholder="ex: 38 ou 38+2"></div>
+        <div id="diasBox"><label for="dias">Dias de vida</label><input id="dias" inputmode="numeric" placeholder="automático"></div>
+        <div class="inteiro" id="suporteBox"><label for="suporte">Suporte ventilatório</label><select id="suporte"></select></div>
+        <div class="inteiro" id="drogasBox"><label for="drogas">Drogas vasoativas (em branco = sem DVA)</label><input id="drogas"></div>
+        <div class="inteiro"><label for="comentario">Texto (pode editar)</label><textarea id="comentario" rows="3"></textarea></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Conclusão</legend>
+      <textarea id="conclusao" rows="2">Ecocardiograma normal.</textarea>
+      <div class="chips">
+        <button type="button" class="chip" data-conclusao="0">FOP (normal para idade)</button>
+        <button type="button" class="chip" data-conclusao="1">FOP + PCA sem reperc.</button>
+        <button type="button" class="chip" data-conclusao="2">FOP + PCA com reperc.</button>
+      </div>
+    </fieldset>
+
+    <div class="acoes">
+      <button type="button" class="btn" id="imprimir">Imprimir / PDF</button>
+      <button type="button" class="btn" id="copiar">Copiar para o MV</button>
+      <button type="button" class="btn sec lado" id="novo">Novo paciente</button>
+    </div>
+    <div id="aviso"></div>
+  </form>
+
+  <!-- ===================== LAUDO ===================== -->
+  <div class="previa">
+    <div class="folha" id="folha">
+      <div class="cab">
+        <div class="medico">Dr. Oliver Kligerman</div>
+        <div class="esp">Cardiologista pediátrico, Ecocardiografista infantil e fetal</div>
+        <div class="crm">CRM 164416 / RQE 727341</div>
+      </div>
+
+      <table class="bloco">
+        <tr><td><div class="um"><b>Nome:</b> <span id="p_nome"></span></div></td><td><div class="um"><b>Data do exame:</b> <span id="p_exame"></span></div></td></tr>
+        <tr><td><div class="um"><b>Data de nascimento:</b> <span id="p_nasc"></span></div></td><td><div class="um"><b>Local do exame:</b> <span id="p_local"></span></div></td></tr>
+        <tr><td><div class="um"><b>Idade:</b> <span id="p_idade"></span></div></td><td><div class="um" id="p_antropo"></div></td></tr>
+      </table>
+
+      <div class="titulo">ECOCARDIOGRAMA TRANSTORÁCICO INFANTIL COM DOPPLER COLORIDO</div>
+
+      <table class="medidas">
+        <colgroup><col class="c1"><col class="c2"><col class="c3"></colgroup>
+        <thead><tr><th>ESTRUTURA</th><th>MEDIDAS</th><th>VALOR REFERENCIA</th></tr></thead>
+        <tbody id="p_tabela"></tbody>
+      </table>
+
+      <div class="secao">Análise Descritiva:</div>
+      <div class="texto" id="p_analise"></div>
+
+      <div id="p_comentBox">
+        <div class="secao">Comentários:</div>
+        <div class="texto" id="p_comentario"></div>
+      </div>
+
+      <div class="secao">Conclusão:</div>
+      <div class="texto" id="p_conclusao"></div>
+
+      <div class="rodape">
+        <div class="assin"><div class="espaco-assin"></div></div>
+        <div class="traco"></div>
+        <div class="end" id="p_rodape"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== DADOS =====================
+var LOCAIS = [
+  { nome: 'Clínica Doce Infância',
+    rodape: 'Clínica Doce Infância Especialidades Pediátricas, Rua Tatuibi, 67, Vila Paulista, Limeira-SP, 13484-050' },
+  { nome: 'Santa Casa de Rio Claro',
+    rodape: 'Santa Casa de Misericórdia de Rio Claro, Rua 02, 297 - Saúde, Rio Claro-SP, 13500-312' },
+  { nome: 'Santa Casa de Piracicaba',
+    rodape: 'Santa Casa de Piracicaba, Av. Independência, 953, Cidade Alta, Piracicaba - SP, 13419-155' },
+  { nome: 'Hospital Santa Filomena',
+    rodape: 'Hospital Santa Filomena, Av. 2, 345 - Centro, Rio Claro - SP, 13500-410' },
+  { nome: 'Hospital Medical',
+    rodape: 'Hospital Medical, Av. Ana Carolina de Barros Levi, 124 - Centro, Limeira - SP, 13480-755' }
+];
+
+var SETORES = [
+  { nome: 'UTI neonatal', beiraLeito: true, rn: true },
+  { nome: 'UTI pediátrica', beiraLeito: true, rn: false },
+  { nome: 'enfermaria pediátrica', beiraLeito: false, rn: false },
+  { nome: 'alojamento conjunto', beiraLeito: false, rn: true }
+];
+
+var SUPORTES = ['intubado em ventilação mecânica', 'em CPAP', 'em ventilação não invasiva',
+                'em cateter nasal de O2', 'em ar ambiente'];
+
+var ANALISE_PADRAO = [
+  '- Situs solitus. Levocardia.',
+  '- Conexão venosa sistêmica normal. Veia cava inferior com dimensão normal e colapsibilidade inspiratória preservada.',
+  '- Conexão venosa pulmonar normal.',
+  '- Conexão atrioventricular biventricular concordante.',
+  '- Conexão ventriculoarterial concordante.',
+  '- Septo interatrial íntegro.',
+  '- Septo interventricular íntegro.',
+  '- Átrio direito com dimensão normal.',
+  '- Átrio esquerdo com dimensão normal.',
+  '- Valva tricúspide com aspecto morfológico normal e sem disfunção.',
+  '- Valva mitral com aspecto morfológico normal e sem disfunção.',
+  '- Ventrículo direito com dimensão e espessura miocárdica normais. Função sistólica preservada à análise qualitativa.',
+  '- Ventrículo esquerdo com dimensão e espessura miocárdica normais. Função sistólica preservada.',
+  '- Valva pulmonar com aspecto morfológico normal, sem disfunção.',
+  '- Valva aórtica trivalvular, com aspecto morfológico normal e sem disfunção.',
+  '- Tronco pulmonar de dimensões normais. Artérias pulmonares confluentes e de dimensões normais.',
+  '- Arco aórtico à esquerda com dimensões normais e sem obstruções. Fluxo normal em aorta descendente e abdominal.',
+  '- Ausência de fluxo em topografia de canal arterial.',
+  '- Coronárias com origens, dimensões e trajetos proximais normais.',
+  '- Pericárdio de aspecto normal, sem derrame.',
+  '- Ausência de imagens sugestivas de trombos e/ou vegetações.'
+].join('\n');
+
+var FRASES = [
+  { padrao: 'Septo interatrial íntegro.',
+    nova: 'Forame oval patente com fluxo direcionado do átrio esquerdo para o átrio direito.' },
+  { padrao: 'Valva tricúspide com aspecto morfológico normal e sem disfunção.',
+    nova: 'Valva tricúspide com morfologia normal e regurgitação discreta (fisiológica). PSVD estimada em {VALOR} mmHg (normal <35 mmHg), considerando PAD de 5 mmHg.',
+    perguntas: { VALOR: 'PSVD estimada (mmHg):' } },
+  { padrao: 'Ausência de fluxo em topografia de canal arterial.',
+    nova: 'Presença de canal arterial medindo cerca de {X} mm, com fluxo direcionado da aorta para o tronco pulmonar, com gradiente máximo de {Y} mmHg.',
+    perguntas: { X: 'Diâmetro do canal arterial (mm):', Y: 'Gradiente máximo (mmHg):' } },
+  { padrao: 'Septo interventricular íntegro.',
+    nova: 'Comunicação interventricular {TIPO} medindo {Y} mm, com fluxo direcionado do ventrículo esquerdo para o ventrículo direito e gradiente máximo de {Z} mmHg.',
+    perguntas: { TIPO: 'Tipo da CIV (ex: perimembranosa, perimembranosa de via de saída, muscular trabecular, muscular apical):',
+                 Y: 'Diâmetro da CIV (mm):', Z: 'Gradiente máximo VE-VD (mmHg):' } }
+];
+
+var CONCLUSAO_PADRAO = 'Ecocardiograma normal.';
+var CONCLUSOES = [
+  'Forame oval patente (normal para idade).',
+  'Forame oval patente\nPersistência do canal arterial sem repercussão hemodinâmica',
+  'Forame oval patente\nPersistência do canal arterial com repercussão hemodinâmica'
+];
+
+// Referencias por SC (planilha "Esboço valores de referência"): limite inferior de cada faixa.
+var LIMITES_SC = [0.10, 0.21, 0.26, 0.31, 0.36, 0.41, 0.46, 0.51, 0.56, 0.61, 0.66,
+                  0.71, 0.81, 0.91, 1.01, 1.11, 1.21, 1.31, 1.41, 1.51, 1.76];
+var SEPTO_PP = ['2,4-4', '2,4-4,5', '3-5', '3-5', '3-5,5', '3,5-5,5', '3,5-5,5', '4-6', '4-6',
+  '4-6', '4-6,5', '4,5-7', '4,5-7', '4,5-7,5', '4,5-7,5', '5-8', '5-8', '5-8,5', '5,5-8,5', '6-9', '7-10'];
+var REF = {
+  AE: ['6-14', '10-17', '11-19', '12-20', '13-21', '14-22', '14-23', '15-24', '16-24', '16-25', '16-26',
+       '16-27', '16-28', '17-29', '19-30', '19-31', '21-31', '22-33', '23-34', '24-36', '24-42'],
+  AO: ['6-13', '8-14', '8-15', '9-15', '10-16', '11-16', '12-17', '12-18', '13-18', '13-19', '14-20',
+       '15-21', '15-22', '16-24', '17-24', '17-25', '17-26', '18-27', '18-30', '18-31', '23-32'],
+  SEPTO: SEPTO_PP, PP: SEPTO_PP,
+  DDVD: ['4-13', '4-13', '5-13', '5-13', '6-14', '6-15', '7-16', '7-16', '8-16', '8-16', '8-17',
+         '8-17', '9-18', '9-18', '9-18', '10-19', '10-19', '11-20', '12-21', '12-23', '13-24'],
+  DDVE: ['13-19', '14-21', '16-23', '17-25', '18-25', '19-27', '21-31', '23-34', '25-36', '26-37', '27-39',
+         '27-40', '29-42', '31-43', '31-45', '32-46', '35-47', '35-49', '37-49', '36-51', '37-59']
+};
+
+var LINHAS = [
+  { id: 'AE', nome: 'AE', un: 'mm' },
+  { id: 'AO', nome: 'Ao (Raíz)', un: 'mm' },
+  { id: 'SEPTO', nome: 'Septo', un: 'mm' },
+  { id: 'PP', nome: 'Parede Post', un: 'mm' },
+  { id: 'DDVD', nome: 'DDVD', un: 'mm' },
+  { id: 'DDVE', nome: 'DDVE', un: 'mm' },
+  { id: 'DSVE', nome: 'DSVE', un: 'mm' },
+  { id: 'FEVE', nome: 'FEVE (T)', un: '%', fixo: 'H: >52% M: >54%' },
+  { id: 'MASSA', nome: 'Massa VE', un: 'g/m²', fixo: 'H: <115g/m²; M: <95g/m²' }
+];
+
+// ===================== CALCULOS =====================
+function $(id) { return document.getElementById(id); }
+function num(v) { var n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : NaN; }
+function virgula(n, casas) { return n.toFixed(casas).replace('.', ','); }
+function semZero(n) { return String(+n.toFixed(2)).replace('.', ','); }
+
+function calcularSC(p, a) {
+  if (a > 0) return 0.024265 * Math.pow(p, 0.5378) * Math.pow(a, 0.3964);
+  return (4 * p + 7) / (p + 90);
+}
+function faixa(sc) {
+  var idx = 0;
+  for (var i = 0; i < LIMITES_SC.length; i++) if (LIMITES_SC[i] <= sc + 0.000001) idx = i;
+  return idx;
+}
+function lerData(txt) {
+  var s = String(txt).trim(), d, m, a;
+  if (/^[0-9]{8}$/.test(s)) { d = +s.substr(0, 2); m = +s.substr(2, 2); a = +s.substr(4, 4); }
+  else {
+    var p = s.split(/[^0-9]+/);
+    if (p.length != 3 || !p[0]) return null;
+    d = +p[0]; m = +p[1]; a = +p[2];
+  }
+  if (a < 100) a += (a <= new Date().getFullYear() % 100 ? 2000 : 1900);
+  var data = new Date(a, m - 1, d);
+  if (data.getFullYear() != a || data.getMonth() != m - 1 || data.getDate() != d) return null;
+  return data;
+}
+function dataTexto(d) {
+  function z(n) { return (n < 10 ? '0' : '') + n; }
+  return z(d.getDate()) + '/' + z(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+function hoje() { var h = new Date(); return new Date(h.getFullYear(), h.getMonth(), h.getDate()); }
+function plural(n, um, varios) { return n + ' ' + (n == 1 ? um : varios); }
+function calcularIdade(nasc, ref) {
+  var a = ref.getFullYear() - nasc.getFullYear();
+  var m = ref.getMonth() - nasc.getMonth();
+  var d = ref.getDate() - nasc.getDate();
+  if (d < 0) { m--; d += new Date(ref.getFullYear(), ref.getMonth(), 0).getDate(); }
+  if (m < 0) { a--; m += 12; }
+  if (a < 0) return null;
+  if (a == 0 && m == 0) return plural(d, 'dia', 'dias');
+  if (a == 0) return plural(m, 'mês', 'meses') + (d ? ' e ' + plural(d, 'dia', 'dias') : '');
+  return plural(a, 'ano', 'anos') + (m ? ' e ' + plural(m, 'mês', 'meses') : '');
+}
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// ===================== ESTADO DERIVADO =====================
+function dados() {
+  var d = {};
+  d.internado = document.querySelector('input[name=tipo]:checked').value === 'int';
+  d.nome = $('nome').value.trim().toUpperCase();
+  d.nasc = lerData($('nasc').value);
+  d.exame = lerData($('exame').value) || hoje();
+  var li = $('local').value;
+  if (li === 'outro') { d.local = $('localOutro').value.trim().toUpperCase(); d.rodape = ''; }
+  else if (li === '') { d.local = ''; d.rodape = ''; }
+  else { d.local = LOCAIS[+li].nome.toUpperCase(); d.rodape = LOCAIS[+li].rodape; }
+  d.peso = num($('peso').value);
+  d.altura = num($('altura').value);
+  if (d.peso > 0) {
+    d.sc = Math.round(calcularSC(d.peso, d.altura) * 100) / 100;
+    d.formula = d.altura > 0 ? 'Haycock' : 'Costeff, só peso';
+    d.faixa = faixa(d.sc);
+  }
+  d.idade = d.nasc ? calcularIdade(d.nasc, d.exame) : null;
+  d.diasVida = d.nasc ? Math.round((d.exame - d.nasc) / 86400000) : null;
+  return d;
+}
+
+// FEVE por Teichholz (DDVE e DSVE) e massa VE indexada (ASE/Devereux), medidas em mm.
+function volTeichholz(mm) { var d = mm / 10; return 7 / (2.4 + d) * d * d * d; }
+function feveAuto() {
+  var dd = num($('m_DDVE').value), ds = num($('m_DSVE').value);
+  if (!(dd > 0 && ds > 0 && ds < dd)) return NaN;
+  var vd = volTeichholz(dd), vs = volTeichholz(ds);
+  return (vd - vs) / vd * 100;
+}
+function massaAuto(sc) {
+  var s = num($('m_SEPTO').value), dd = num($('m_DDVE').value), pp = num($('m_PP').value);
+  if (!(s > 0 && dd > 0 && pp > 0 && sc > 0)) return NaN;
+  s /= 10; dd /= 10; pp /= 10;
+  var g = 0.8 * 1.04 * (Math.pow(s + dd + pp, 3) - Math.pow(dd, 3)) + 0.6;
+  return g / sc;
+}
+
+function valorMedida(l, d) {
+  var bruto = $('m_' + l.id).value.trim();
+  if (bruto === '' && l.id === 'FEVE') { var f = feveAuto(); return isFinite(f) ? Math.round(f) + '%' : ''; }
+  if (bruto === '' && l.id === 'MASSA') { var m = massaAuto(d && d.sc); return isFinite(m) ? Math.round(m) + ' g/m²' : ''; }
+  var v = num(bruto);
+  if (!(v >= 0) || bruto === '') return '';
+  if (l.un === 'mm') return virgula(v, 1) + ' mm';
+  if (l.un === '%') return semZero(v) + '%';
+  return semZero(v) + ' ' + l.un;
+}
+function referencia(l, d) {
+  if (l.fixo) return l.fixo;
+  if (REF[l.id] && d.faixa !== undefined) return REF[l.id][d.faixa] + ' mm';
+  return '';
+}
+
+// ===================== COMENTARIO =====================
+function montarComentario(d) {
+  var si = $('setor').value;
+  if (si === '') return '';
+  var setor = SETORES[+si];
+  var dias = num($('dias').value);
+  if (!(dias >= 0)) dias = d.diasVida;
+  var ehRN = setor.rn || (d.diasVida !== null && d.diasVida <= 28);
+  var sujeito = 'paciente';
+  if (ehRN) {
+    var ig = $('ig').value.trim();
+    sujeito = 'RN nascido de ' + (ig || '__') + ' semanas, atualmente com ' +
+      (dias === null || isNaN(dias) ? '__ dias' : plural(dias, 'dia', 'dias')) + ' de vida';
+  }
+  var f = 'Exame realizado ';
+  if (setor.beiraLeito) {
+    var sup = $('suporte').value === '' ? '' : SUPORTES[+$('suporte').value];
+    var dv = $('drogas').value.trim();
+    var drogas = dv ? 'em uso de ' + dv : 'sem drogas vasoativas';
+    f += 'a beira leito em ' + setor.nome + ' em ' + sujeito;
+    if (sup) f += (ehRN ? ', ' : ' ') + sup;
+    f += (ehRN || sup ? ', ' : ' ') + drogas;
+  } else {
+    f += 'em ' + sujeito + (ehRN ? ', internado em ' : ' internado em ') + setor.nome;
+  }
+  return f + '.';
+}
+var comentarioEditado = false;
+
+function atualizarCamposComentario(d) {
+  var si = $('setor').value;
+  var setor = si === '' ? null : SETORES[+si];
+  var ehRN = setor && (setor.rn || (d.diasVida !== null && d.diasVida <= 28));
+  $('igBox').classList.toggle('oculto', !ehRN);
+  $('diasBox').classList.toggle('oculto', !ehRN);
+  $('dias').placeholder = d.diasVida !== null ? 'automático: ' + d.diasVida : 'sem data de nascimento';
+  $('suporteBox').classList.toggle('oculto', !(setor && setor.beiraLeito));
+  $('drogasBox').classList.toggle('oculto', !(setor && setor.beiraLeito));
+  if (!comentarioEditado) $('comentario').value = montarComentario(d);
+}
+
+// ===================== RENDER =====================
+function render() {
+  var d = dados();
+  $('comentBox').classList.toggle('oculto', !d.internado);
+  $('p_comentBox').classList.toggle('oculto', !d.internado);
+  $('localOutroBox').classList.toggle('oculto', $('local').value !== 'outro');
+  if (d.internado) atualizarCamposComentario(d);
+
+  $('calc').innerHTML = d.sc ? 'SC <b>' + virgula(d.sc, 2) + ' m²</b> (' + d.formula + ')' +
+      (d.idade ? ' · idade <b>' + d.idade + '</b>' : '') : 'Informe o peso para calcular a SC.';
+
+  $('p_nome').textContent = d.nome;
+  $('p_exame').textContent = dataTexto(d.exame);
+  $('p_nasc').textContent = d.nasc ? dataTexto(d.nasc) : '';
+  $('p_local').textContent = d.local;
+  $('p_idade').textContent = d.idade ? d.idade.toUpperCase() : '';
+  $('p_antropo').innerHTML = antropoTexto(d, true);
+
+  var fa = feveAuto(), ma = massaAuto(d.sc);
+  $('m_FEVE').placeholder = isFinite(fa) ? 'auto: ' + Math.round(fa) : 'automático';
+  $('m_MASSA').placeholder = isFinite(ma) ? 'auto: ' + Math.round(ma) : 'automático';
+
+  var linhas = '';
+  LINHAS.forEach(function (l) {
+    linhas += '<tr><td>' + esc(l.nome) + '</td><td>' + esc(valorMedida(l, d)) + '</td><td>' + esc(referencia(l, d)) + '</td></tr>';
+  });
+  $('p_tabela').innerHTML = linhas;
+
+  $('p_analise').innerHTML = paragrafos($('analise').value);
+  $('p_comentario').innerHTML = paragrafos($('comentario').value);
+  $('p_conclusao').innerHTML = paragrafos($('conclusao').value);
+  $('p_rodape').textContent = d.rodape;
+  ajustarTamanho();
+}
+
+// Escolhe o maior tamanho de letra/espacamento que ainda cabe em uma pagina A4,
+// e fixa assinatura e rodape no pe da pagina.
+function cabeNaPagina() {
+  var f = $('folha'), mm = 96 / 25.4;
+  var fimTexto = $('p_conclusao').getBoundingClientRect().bottom - f.getBoundingClientRect().top;
+  var rod = document.querySelector('.rodape').getBoundingClientRect().height;
+  return fimTexto + rod + 8 * mm <= 293 * mm;
+}
+var K_MAX = 1.35, K_MIN = 1.0, E_MAX = 0.3;
+function ajustarTamanho() {
+  var f = $('folha');
+  f.classList.remove('cabe');
+  // 1) maior tamanho de letra que cabe
+  var k = K_MAX;
+  f.style.setProperty('--e', 0);
+  f.style.setProperty('--k', k);
+  while (k > K_MIN && !cabeNaPagina()) {
+    k = Math.round((k - 0.025) * 1000) / 1000;
+    f.style.setProperty('--k', k);
+  }
+  // 2) sobrou espaco? distribui aumentando entrelinhas e espacos entre secoes
+  var e = 0;
+  if (cabeNaPagina()) {
+    while (e < E_MAX) {
+      f.style.setProperty('--e', Math.round((e + 0.01) * 100) / 100);
+      if (!cabeNaPagina()) break;
+      e = Math.round((e + 0.01) * 100) / 100;
+    }
+  }
+  f.style.setProperty('--e', e);
+  f.classList.toggle('cabe', cabeNaPagina());
+  ajustarCabecalho();
+}
+
+// Nome ou local muito grandes: diminui a letra daquela linha em vez de quebrar.
+function ajustarCabecalho() {
+  document.querySelectorAll('.bloco .um').forEach(function (el) {
+    var alvo = el.querySelector('span') || el;   // diminui so o texto, o rotulo fica igual
+    alvo.style.fontSize = '';
+    var tam = parseFloat(getComputedStyle(alvo).fontSize);
+    var min = tam * 0.55;
+    while (el.scrollWidth > el.clientWidth + 1 && tam > min) {
+      tam -= 0.25;
+      alvo.style.fontSize = tam + 'px';
+    }
+  });
+}
+
+function antropoTexto(d, html) {
+  var b = function (t) { return html ? '<b>' + t + '</b>' : t; };
+  var peso = d.peso > 0 ? semZero(d.peso) : '';
+  var s = b('Peso:') + ' ' + peso + ' Kg';
+  if (d.altura > 0) s += '&nbsp;&nbsp;&nbsp; ' + b('Estatura:') + ' ' + semZero(d.altura) + ' cm';
+  s += '&nbsp;&nbsp;&nbsp; ' + b('SC:') + ' ' + (d.sc ? virgula(d.sc, 2) : '') + ' m²';
+  return html ? s : s.replace(/&nbsp;/g, ' ');
+}
+function paragrafos(t) {
+  return t.split('\n').map(function (l) { return '<p>' + (l.trim() ? esc(l) : '&nbsp;') + '</p>'; }).join('');
+}
+
+// ===================== TEXTO PARA O MV =====================
+function textoMV() {
+  var d = dados();
+  var L = [];
+  L.push('Nome: ' + d.nome + '     Data do exame: ' + dataTexto(d.exame));
+  L.push('Data de nascimento: ' + (d.nasc ? dataTexto(d.nasc) : '') + '     Local do exame: ' + d.local);
+  L.push('Idade: ' + (d.idade ? d.idade.toUpperCase() : '') + '     ' + antropoTexto(d, false).replace(/ {2,}/g, '  '));
+  L.push('');
+  L.push('ECOCARDIOGRAMA TRANSTORÁCICO INFANTIL COM DOPPLER COLORIDO');
+  L.push('');
+  LINHAS.forEach(function (l) {
+    var v = valorMedida(l, d), r = referencia(l, d);
+    L.push(l.nome + ': ' + v + (r ? ' (VR: ' + r + ')' : ''));
+  });
+  L.push('');
+  L.push('Análise Descritiva:');
+  L.push($('analise').value.trim());
+  if (d.internado && $('comentario').value.trim()) {
+    L.push(''); L.push('Comentários:'); L.push($('comentario').value.trim());
+  }
+  L.push(''); L.push('Conclusão:'); L.push($('conclusao').value.trim());
+  return L.join('\n');
+}
+
+// ===================== ACOES =====================
+function aviso(t) { $('aviso').textContent = t; setTimeout(function () { if ($('aviso').textContent === t) $('aviso').textContent = ''; }, 3500); }
+
+function copiar() {
+  var t = textoMV();
+  function plano() {
+    var ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    aviso(ok ? 'Texto copiado. Cole no sistema do hospital.' : 'Não foi possível copiar automaticamente.');
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(t).then(function () { aviso('Texto copiado. Cole no sistema do hospital.'); }, plano);
+  } else { plano(); }
+}
+
+function imprimir() {
+  render();
+  var d = dados();
+  var antigo = document.title;
+  var dt = dataTexto(d.exame).replace(/\//g, '.');
+  document.title = (d.nome ? d.nome + ' - ' : '') + 'ECO INFANTIL ' + dt;
+  window.print();
+  setTimeout(function () { document.title = antigo; }, 1000);
+}
+
+function trocarFrase(i) {
+  var f = FRASES[i];
+  var t = $('analise').value;
+  if (t.indexOf(f.padrao) < 0) { aviso('A frase padrão não está no texto (já foi trocada?).'); return; }
+  var nova = f.nova;
+  for (var chave in (f.perguntas || {})) {
+    var v = prompt(f.perguntas[chave], '');
+    if (v === null) return;
+    nova = nova.split('{' + chave + '}').join(v.trim() || '_');
+  }
+  $('analise').value = t.replace(f.padrao, nova);
+  render();
+}
+
+function trocarConclusao(i) {
+  var atual = $('conclusao').value.trim();
+  var nova = CONCLUSOES[i];
+  var conhecidas = CONCLUSOES.concat([CONCLUSAO_PADRAO, '']);
+  if (atual === nova) nova = CONCLUSAO_PADRAO;   // clicar de novo volta ao normal
+  else if (conhecidas.indexOf(atual) < 0 &&
+           !confirm('A conclusão foi editada. Substituir pelo texto do botão?')) return;
+  $('conclusao').value = nova;
+  render();
+}
+
+function novoPaciente() {
+  if (!confirm('Limpar todos os campos para um novo paciente?')) return;
+  ['nome', 'nasc', 'peso', 'altura', 'localOutro', 'ig', 'dias', 'drogas', 'comentario'].forEach(function (id) { $(id).value = ''; });
+  LINHAS.forEach(function (l) { $('m_' + l.id).value = ''; });
+  $('exame').value = dataTexto(hoje());
+  $('setor').value = ''; $('suporte').value = '';
+  $('analise').value = ANALISE_PADRAO;
+  $('conclusao').value = 'Ecocardiograma normal.';
+  comentarioEditado = false;
+  render();
+  $('nome').focus();
+}
+
+// ===================== INICIO =====================
+(function iniciar() {
+  var opt = '<option value="">—</option>';
+  LOCAIS.forEach(function (l, i) { opt += '<option value="' + i + '">' + esc(l.nome) + '</option>'; });
+  $('local').innerHTML = opt + '<option value="outro">Outro…</option>';
+  var s = '<option value="">— não preencher —</option>';
+  SETORES.forEach(function (x, i) { s += '<option value="' + i + '">' + esc(x.nome) + '</option>'; });
+  $('setor').innerHTML = s;
+  var sp = '<option value="">— não citar —</option>';
+  SUPORTES.forEach(function (x, i) { sp += '<option value="' + i + '">' + esc(x) + '</option>'; });
+  $('suporte').innerHTML = sp;
+  $('analise').value = ANALISE_PADRAO;
+  $('exame').value = dataTexto(hoje());
+
+  // Datas: digitar so os numeros (08121988) vira 08/12/1988 automaticamente.
+  ['nasc', 'exame'].forEach(function (id) {
+    $(id).addEventListener('input', function (e) {
+      var el = $(id);
+      if (e.inputType && e.inputType.indexOf('delete') === 0) return;
+      var n = el.value.replace(/[^0-9]/g, '').slice(0, 8);
+      var f = n.slice(0, 2);
+      if (n.length > 2) f += '/' + n.slice(2, 4);
+      if (n.length > 4) f += '/' + n.slice(4);
+      if (n.length === 2 || n.length === 4) f += '/';
+      el.value = f;
+    });
+    $(id).setAttribute('maxlength', '10');
+  });
+
+  $('form').addEventListener('input', function (e) {
+    if (e.target.id === 'comentario') comentarioEditado = $('comentario').value.trim() !== '';
+    render();
+  });
+  $('form').addEventListener('change', function (e) {
+    if (['setor', 'suporte'].indexOf(e.target.id) >= 0) comentarioEditado = false;
+    render();
+  });
+  ['ig', 'dias', 'drogas', 'nasc', 'exame'].forEach(function (id) {
+    $(id).addEventListener('input', function () { comentarioEditado = false; render(); });
+  });
+  document.querySelectorAll('[data-frase]').forEach(function (b) {
+    b.addEventListener('click', function () { trocarFrase(+b.getAttribute('data-frase')); });
+  });
+  document.querySelectorAll('[data-conclusao]').forEach(function (b) {
+    b.addEventListener('click', function () { trocarConclusao(+b.getAttribute('data-conclusao')); });
+  });
+  window.addEventListener('beforeprint', ajustarTamanho);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+  $('restaurar').addEventListener('click', function () {
+    if (confirm('Voltar a análise descritiva para o texto padrão?')) { $('analise').value = ANALISE_PADRAO; render(); }
+  });
+  $('imprimir').addEventListener('click', imprimir);
+  $('copiar').addEventListener('click', copiar);
+  $('novo').addEventListener('click', novoPaciente);
+  render();
+})();
+</script>
+</body>
+</html>
