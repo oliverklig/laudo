@@ -197,6 +197,8 @@
       </div>
     </fieldset>
 
+    <label id="patolBox" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--suave);margin:10px 0 0;cursor:pointer"><input type="checkbox" id="patologico" style="width:auto;margin:0"> Patológico <span style="font-size:11px">(cópia em ECOS PATOLÓGICOS; não sai no laudo)</span></label>
+
     <div class="acoes">
       <button type="button" class="btn" id="imprimir">Imprimir / PDF</button>
       <button type="button" class="btn" id="copiar">Copiar para o MV</button>
@@ -668,6 +670,7 @@ function trocarConclusao(i) {
 function novoPaciente() {
   if (!podeLimpar('Limpar todos os campos para um novo paciente?')) return;
   salvoNoDrive = false;
+  $('patologico').checked = false;
   ['nome', 'nasc', 'peso', 'altura', 'localOutro', 'ig', 'dias', 'drogas', 'comentario'].forEach(function (id) { $(id).value = ''; });
   LINHAS.forEach(function (l) { $('m_' + l.id).value = ''; });
   $('exame').value = dataTexto(hoje());
@@ -720,13 +723,14 @@ function salvarNoDrive() {
   var botao = $('salvarDrive');
   botao.disabled = true; botao.textContent = 'Salvando...';
   function fim() { botao.disabled = false; botao.textContent = 'Salvar no Drive'; }
-  fetch(c.url, { method: 'POST', body: JSON.stringify({ chave: c.chave, tipo: arq.tipo, modelo: arq.modelo, convenio: arq.convenio || '', arquivo: arq.arquivo, dados: arq.dados }) })
+  fetch(c.url, { method: 'POST', body: JSON.stringify({ chave: c.chave, tipo: arq.tipo, modelo: arq.modelo, convenio: arq.convenio || '', patologico: !!arq.patologico, arquivo: arq.arquivo, dados: arq.dados }) })
     .then(function (r) { return r.json(); })
     .then(function (res) {
       fim();
       if (res && res.ok) {
         salvoNoDrive = true;
-        aviso('Salvo no Drive: ' + (res.nome || arq.arquivo));
+        aviso('Salvo no Drive: ' + (res.nome || arq.arquivo) + (!res.patologico ? '' : /^ERRO/.test(res.patologico)
+          ? ' — ATENÇÃO: a cópia em ECOS PATOLÓGICOS falhou' : ' + cópia em ECOS PATOLÓGICOS'));
       } else {
         var erro = (res && res.erro) || 'resposta inesperada';
         alert('O Drive não salvou o laudo: ' + erro);
@@ -756,7 +760,7 @@ function arquivoParaDrive() {
   if (conv) arquivo += ' ' + conv;
   var medidas = LINHAS.map(function (l) { return { rotulo: l.nome, medida: valorMedida(l, d), ref: referencia(l, d) }; });
   return {
-    tipo: 'infantil', modelo: d.internado ? 'int' : 'amb', arquivo: arquivo, convenio: conv,
+    tipo: 'infantil', modelo: d.internado ? 'int' : 'amb', arquivo: arquivo, convenio: conv, patologico: $('patologico').checked,
     dados: {
       nome: d.nome, exame: dataTexto(d.exame), nasc: d.nasc ? dataTexto(d.nasc) : '',
       idade: d.idade ? d.idade.toUpperCase() : '', local: d.local, rodape: d.rodape,
