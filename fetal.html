@@ -580,12 +580,51 @@ function copiar() {
   } else { plano(); }
 }
 
-function imprimir() {
-  render();
-  var d = dadosGerais(), antigo = document.title;
-  document.title = (d.nome ? d.nome + ' - ' : '') + (d.gemelar ? 'GEMELAR - ' : '') + 'ECO FETAL ' + dataTexto(d.exame).replace(/\//g, '.');
+// ===================== NOME DO ARQUIVO (igual ao do Drive) =====================
+// NOME - ECO INFANTIL - AMBULATORIAL/INTERNADO - CONVENIO - dd.mm.aaaa - LOCAL
+// NOME - ECO FETAL - (GEMELAR) - CONVENIO - dd.mm.aaaa - LOCAL
+function nomePadraoArquivo(o) {
+  var data = String(o.data || '').match(/(\d{2})[.\/](\d{2})[.\/](\d{4})/);
+  var partes = [
+    o.nome,
+    o.tipo === 'fetal' ? 'ECO FETAL' : 'ECO INFANTIL',
+    o.tipo === 'fetal' ? (o.gemelar ? 'GEMELAR' : '') : (o.modelo === 'int' ? 'INTERNADO' : 'AMBULATORIAL'),
+    o.convenio,
+    data ? data[1] + '.' + data[2] + '.' + data[3] : '',
+    o.local
+  ];
+  return partes.map(function (x) { return String(x || '').replace(/\s+/g, ' ').trim().toUpperCase(); })
+               .filter(function (x) { return x; }).join(' - ').slice(0, 200);
+}
+
+// Imprimir / PDF com o nome padrao. Dentro do app do Google (tinyurl) a pagina fica numa moldura e o
+// navegador usaria o titulo da aba ("Laudo Eco ..."); por isso abre o laudo numa janela propria com o nome certo.
+function imprimirComNome(nome) {
+  var antigo = document.title;
+  if (window.top !== window.self) {
+    var w = null;
+    try { w = window.open('', '_blank'); } catch (e) {}
+    if (w) {
+      var esc = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+      var cabeca = Array.prototype.map.call(document.querySelectorAll('style, link[rel="stylesheet"]'),
+                                            function (el) { return el.outerHTML; }).join('');
+      var corpo = document.body.cloneNode(true);
+      Array.prototype.forEach.call(corpo.querySelectorAll('script, form'), function (el) { el.parentNode.removeChild(el); });
+      w.document.open();
+      w.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>' + esc(nome) + '</title>' +
+                       cabeca + '<style>@media screen{.previa{display:block}}</style></head><body>' + corpo.innerHTML + '</body></html>');
+      w.document.close();
+      setTimeout(function () { w.focus(); w.print(); setTimeout(function () { try { w.close(); } catch (e) {} }, 500); }, 400);
+      return;
+    }
+  }
+  document.title = nome;
   window.print();
   setTimeout(function () { document.title = antigo; }, 1000);
+}
+
+function imprimir() {
+  imprimirComNome(arquivoParaDrive().arquivo);
 }
 
 function novaGestante() {
@@ -680,9 +719,9 @@ function mesDe(d) { return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '')
 function arquivoParaDrive() {
   render();
   var d = dadosGerais();
-  var arquivo = (d.nome ? d.nome + ' - ' : '') + (d.gemelar ? 'GEMELAR - ' : '') + 'ECO FETAL ' + dataTexto(d.exame).replace(/\//g, '.');
   var conv = convenioAtual();
-  if (conv) arquivo += ' ' + conv;
+  var arquivo = nomePadraoArquivo({ nome: d.nome, tipo: 'fetal', gemelar: d.gemelar, convenio: conv,
+                                    data: dataTexto(d.exame), local: d.local });
   var n = d.gemelar ? 2 : 1, lista = [];
   for (var i = 0; i < n; i++) {
     var f = fetos[i], t = textosFeto(f), pos = f.pos.value.trim().toUpperCase();
